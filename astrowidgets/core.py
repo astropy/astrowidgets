@@ -71,6 +71,8 @@ from ginga.canvas.CanvasObject import drawCatalog
 from ginga.web.jupyterw.ImageViewJpw import EnhancedCanvasView
 from ginga.util.wcs import raDegToString, decDegToString
 
+__all__ = ['ImageWidget']
+
 
 class ImageWidget(ipyw.VBox):
     """
