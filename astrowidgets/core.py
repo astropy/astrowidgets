@@ -696,3 +696,18 @@ class ImageWidget(ipyw.VBox):
         Save out the current image view to given PNG filename.
         """
         self._viewer.save_rgb_image_as_file(filename)
+
+    @property
+    def width(self):
+        """
+        The width of the widget in pixels
+        """
+        return int(self._jup_img.width)
+
+    @property
+    def height(self):
+        """
+        The height of the widget in pixels
+        """
+        return int(self._jup_img.height)
+
