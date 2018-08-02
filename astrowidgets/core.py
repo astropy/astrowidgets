@@ -73,6 +73,8 @@ from ginga.util.wcs import raDegToString, decDegToString
 
 __all__ = ['ImageWidget']
 
+# Allowed locations for cursor display
+ALLOWED_CURSOR_LOCATIONS = ['top', 'bottom', None]
 
 class ImageWidget(ipyw.VBox):
     """
@@ -249,7 +251,9 @@ class ImageWidget(ipyw.VBox):
         image = AstroImage(logger=self.logger)
         image.set_data(nddata.data)
         _wcs = AstropyWCS(self.logger)
-        _wcs.load_header(nddata.wcs.to_header())
+        if nddata.wcs:
+            _wcs.load_header(nddata.wcs.to_header())
+
         try:
             image.set_wcs(_wcs)
         except Exception as e:
@@ -326,6 +330,11 @@ class ImageWidget(ipyw.VBox):
 
         """
         return self._viewer.get_scale()
+
+    @zoom_level.setter
+    def zoom_level(self, val):
+        self._viewer.scale_to(val, val)
+
 
     def zoom(self, val):
         """
@@ -405,7 +414,7 @@ class ImageWidget(ipyw.VBox):
         ----------
         x_colname, y_colname : str
             Column names for X and Y data coordinates.
-            Coordinates retured are 0- or 1-indexed, depending
+            Coordinates returned are 0- or 1-indexed, depending
             on ``pixel_coords_offset``.
 
         pixel_coords_offset : {0, 1}
@@ -628,6 +637,8 @@ class ImageWidget(ipyw.VBox):
                 raise ValueError('Value must be one of: {}'.format(valid_vals))
             self._viewer.set_autocut_params(val)
         else:  # (low, high)
+            if len(val) > 2:
+                raise ValueError('Value must have length 2.')
             self._viewer.cut_levels(val[0], val[1])
 
     @property
@@ -647,7 +658,9 @@ class ImageWidget(ipyw.VBox):
         elif val == 'bottom':
             self._widget = ipyw.VBox([self._jup_img, self._jup_coord])
         else:
-            raise NotImplementedError
+            raise ValueError('Invalid value {} for cursor.'.format(val) +
+                             'Valid values are: '
+                             '{}'.format(ALLOWED_CURSOR_LOCATIONS))
         self._cursor = val
 
     @property
