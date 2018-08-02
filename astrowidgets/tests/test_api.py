@@ -1,9 +1,16 @@
+
+
 import numpy as np
+
+import pytest
+
 from astropy.io import fits
 from astropy.nddata import NDData
 from astropy.table import Table
 
-from ..core import ImageWidget
+from ginga.ColorDist import ColorDistBase
+
+from ..core import ImageWidget, ALLOWED_CURSOR_LOCATIONS
 
 
 def test_load_fits():
@@ -30,7 +37,7 @@ def test_center_on():
     image = ImageWidget()
     x = 10
     y = 10
-    image.center_on(x, y)
+    image.center_on((x, y))
 
 
 def test_offset_to():
@@ -42,7 +49,8 @@ def test_offset_to():
 
 def test_zoom_level():
     image = ImageWidget()
-    image.zoom_level()
+    image.zoom_level = 5
+    assert image.zoom_level == 5
 
 
 def test_zoom():
@@ -51,6 +59,7 @@ def test_zoom():
     image.zoom(val)
 
 
+@pytest.mark.xfail(reason='Not implemented yet')
 def test_select_points():
     image = ImageWidget()
     image.select_points()
@@ -58,60 +67,98 @@ def test_select_points():
 
 def test_get_selection():
     image = ImageWidget()
-    image.get_selection()
+    marks = image.get_markers()
+    assert isinstance(marks, Table) or marks is None
 
 
-def test_stop_selecting():
+def test_stop_marking():
     image = ImageWidget()
-    image.stop_selecting(clear_marks=True)
+    # This is not much of a test...
+    image.stop_marking(clear_markers=True)
+    assert image.get_markers() is None
+    assert image.is_marking is False
 
 
-def test_is_selecting():
+def test_is_marking():
     image = ImageWidget()
-    image.is_selecting()
+    assert image.is_marking in [True, False]
 
 
-def test_add_marks():
+def test_add_markers():
     image = ImageWidget()
-    table = Table(data=np.random.randint(0, 100, [2, 5]),
-                  names=['x', 'y'])
-    image.add_marks(table, x_colname='x', y_colname='y',
-                    skycoord_colname='coord')
+    table = Table(data=np.random.randint(0, 100, [5, 2]),
+                  names=['x', 'y'], dtype=('int', 'int'))
+    image.add_markers(table, x_colname='x', y_colname='y',
+                      skycoord_colname='coord')
 
 
-def test_reset_marks():
+def test_reset_markers():
     image = ImageWidget()
-    image.reset_marks()
+    # First test: this shouldn't raise any errors
+    # (it also doesn't *do* anything...)
+    image.reset_markers()
+    assert image.get_markers() is None
+
+    # TODO add test of actually removing markers...
 
 
 def test_stretch():
     image = ImageWidget()
-    image.stretch()
+    with pytest.raises(ValueError) as e:
+        image.stretch = 'not a valid value'
+    assert 'must be one of' in str(e)
+
+    image.stretch = 'log'
+    assert isinstance(image.stretch, (ColorDistBase))
 
 
 def test_cuts():
     image = ImageWidget()
-    image.cuts()
+
+    # An invalid string should raise an error
+    with pytest.raises(ValueError) as e:
+        image.cuts = 'not a valid value'
+    assert 'must be one of' in str(e)
+
+    # Setting cuts to something with incorrect length
+    # should raise an error.
+    with pytest.raises(ValueError) as e:
+        image.cuts = (1, 10, 100)
+    assert 'length 2' in str(e)
+
+    # These ought to succeed
+
+    image.cuts = 'median'
+    assert image.cuts == (0.0, 0.0)
+
+    image.cuts = [10, 100]
+    assert image.cuts == (10, 100)
 
 
 def test_cursor():
     image = ImageWidget()
-    image.cursor()
+    assert image.cursor in ALLOWED_CURSOR_LOCATIONS
+    with pytest.raises(ValueError):
+        image.cursor = 'not a valid option'
+    image.cursor = 'bottom'
+    assert image.cursor == 'bottom'
 
 
 def test_click_drag():
     image = ImageWidget()
-    image.click_drag()
+    with pytest.raises(NotImplementedError):
+        image.click_drag()
 
 
 def test_click_center():
     image = ImageWidget()
-    image.click_center()
+    assert (image.click_center is True) or (image.click_center is False)
 
 
 def test_scroll_pan():
     image = ImageWidget()
-    image.scroll_pan()
+    with pytest.raises(NotImplementedError):
+        image.scroll_pan()
 
 
 def test_save():
