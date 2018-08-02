@@ -347,7 +347,7 @@ class ImageWidget(ipyw.VBox):
             See `zoom_level`.
 
         """
-        self._viewer.scale_to(val, val)
+        self.zoom_level = self.zoom_level * val
 
     @property
     def is_marking(self):
