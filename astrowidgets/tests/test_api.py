@@ -128,7 +128,7 @@ def test_cuts():
 
     # These ought to succeed
 
-    image.cuts = 'median'
+    image.cuts = 'histogram'
     assert image.cuts == (0.0, 0.0)
 
     image.cuts = [10, 100]
