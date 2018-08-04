@@ -84,7 +84,7 @@ class ImageWidget(ipyw.VBox):
 
     Parameters
     ----------
-    logger : obj or `None`
+    logger : obj or ``None``
         Ginga logger. For example::
 
             from ginga.misc.log import get_logger
@@ -216,13 +216,13 @@ class ImageWidget(ipyw.VBox):
             inherited. If a single HDU is given, WCS must be in the HDU
             header.
 
-        numhdu : int or `None`
+        numhdu : int or ``None``
             Extension number of the desired HDU.
-            If `None`, it is determined automatically.
+            If ``None``, it is determined automatically.
 
-        memmap : bool or `None`
+        memmap : bool or ``None``
             Memory mapping.
-            If `None, it is determined automatically.
+            If ``None``, it is determined automatically.
 
         """
         if isinstance(fitsorfn, str):
@@ -428,8 +428,8 @@ class ImageWidget(ipyw.VBox):
 
         Returns
         -------
-        markers_table : `~astropy.table.Table` or `None`
-            Table of markers, if any, or `None`.
+        markers_table : `~astropy.table.Table` or ``None``
+            Table of markers, if any, or ``None``.
 
         """
         try:
@@ -645,7 +645,7 @@ class ImageWidget(ipyw.VBox):
     def cursor(self):
         """
         Show or hide cursor information (X, Y, WCS).
-        Acceptable values are 'top', 'bottom', or `None`.
+        Acceptable values are 'top', 'bottom', or ``None``.
         """
         return self._cursor
 
