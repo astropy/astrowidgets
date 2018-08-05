@@ -9,5 +9,6 @@ dependencies:
     - numpy
     - astropy
     - matplotlib
+    - sphinx-astropy
 #   - pip:
 #       - dependency_from_pip
