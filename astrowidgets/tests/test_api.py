@@ -55,8 +55,10 @@ def test_zoom_level():
 
 def test_zoom():
     image = ImageWidget()
+    image.zoom_level = 3
     val = 2
     image.zoom(val)
+    assert image.zoom_level == 6
 
 
 @pytest.mark.xfail(reason='Not implemented yet')
