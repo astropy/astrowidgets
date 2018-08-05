@@ -40,7 +40,7 @@ class ImageWidget(ipyw.VBox):
             logger = get_logger('my_viewer', log_stderr=False,
                                 log_file='ginga.log', level=40)
 
-    width, height : int
+    image_width, image_height : int
         Dimension of Jupyter notebook's image widget.
 
     use_opencv : bool
@@ -49,7 +49,9 @@ class ImageWidget(ipyw.VBox):
         do not have ``opencv``, you will get a warning.
 
     """
-    def __init__(self, logger=None, width=500, height=500, use_opencv=True):
+
+    def __init__(self, logger=None, image_width=500, image_height=500,
+                 use_opencv=True):
         super().__init__()
 
         # TODO: Is this the best place for this?
@@ -64,7 +66,15 @@ class ImageWidget(ipyw.VBox):
         self._is_marking = False
         self._click_center = False
 
-        self._jup_img = ipyw.Image(format='jpeg', width=width, height=height)
+        self._jup_img = ipyw.Image(format='jpeg')
+        self._jup_img.layout.width = str(image_width)
+        self._jup_img.layout.height = str(image_height)
+
+        # These need to also be set for now (until ginga
+        # is modified to use the layout width/height)
+        self._jup_img.width = self._jup_img.layout.width
+        self._jup_img.height = self._jup_img.layout.height
+
         self._viewer.set_widget(self._jup_img)
 
         # enable all possible keyboard and pointer operations
@@ -96,6 +106,14 @@ class ImageWidget(ipyw.VBox):
     def logger(self):
         """Logger for this widget."""
         return self._viewer.logger
+
+    @property
+    def image_width(self):
+        return int(self._jup_img.layout.width)
+
+    @property
+    def image_height(self):
+        return int(self._jup_img.layout.height)
 
     def _mouse_move_cb(self, viewer, button, data_x, data_y):
         """
