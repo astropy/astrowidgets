@@ -115,11 +115,6 @@ matrix:
           os: osx
           env: SETUP_CMD='test'
 
-    allow_failures:
-        # Do a PEP8 test with flake8
-        # (allow to fail unless your code completely compliant)
-        - env: MAIN_CMD='flake8 astrowidgets --count' SETUP_CMD=''
-
 install:
 
     # We now use the ci-helpers package to set up our testing environment.
