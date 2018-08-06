@@ -110,10 +110,10 @@ matrix:
         - stage: Comprehensive tests
           env: MAIN_CMD='pycodestyle astrowidgets --count' SETUP_CMD=''
 
-        # Try MacOS X
-        - stage: Cron tests
-          os: osx
-          env: SETUP_CMD='test'
+        # Try MacOS X (disabled for now; too slow)
+        #- stage: Cron tests
+        #  os: osx
+        #  env: SETUP_CMD='test'
 
     allow_failures:
         # Do a PEP8 test with pycodestyle
