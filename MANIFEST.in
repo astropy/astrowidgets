@@ -8,6 +8,7 @@ include astrowidgets/tests/coveragerc
 
 recursive-include docs *
 recursive-include licenses *
+recursive-include example_notebooks *
 
 prune build
 prune docs/_build
