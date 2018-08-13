@@ -1,6 +1,6 @@
 
 # Use this in the future?!
-#from stginga.jupyterw.widget import ImageWidget
+# from stginga.jupyterw.widget import ImageWidget
 
 """
 Dev notes
@@ -63,7 +63,6 @@ from astropy.table import Table
 
 # Jupyter widgets
 import ipywidgets as ipyw
-from IPython.display import display
 
 # Ginga
 from ginga.AstroImage import AstroImage
@@ -75,6 +74,7 @@ __all__ = ['ImageWidget']
 
 # Allowed locations for cursor display
 ALLOWED_CURSOR_LOCATIONS = ['top', 'bottom', None]
+
 
 class ImageWidget(ipyw.VBox):
     """
@@ -202,6 +202,7 @@ class ImageWidget(ipyw.VBox):
 #         """
 #         Show widget in Jupyter notebook.
 #         """
+#         from IPython.display import display
 #         return display(self._widget)
 
     def load_fits(self, fitsorfn, numhdu=None, memmap=None):
@@ -334,7 +335,6 @@ class ImageWidget(ipyw.VBox):
     @zoom_level.setter
     def zoom_level(self, val):
         self._viewer.scale_to(val, val)
-
 
     def zoom(self, val):
         """
