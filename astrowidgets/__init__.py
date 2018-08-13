@@ -12,10 +12,10 @@ import sys
 
 __minimum_python_version__ = "3.5"
 
-class UnsupportedPythonError(Exception):
-    pass
-
 if sys.version_info < tuple((int(val) for val in __minimum_python_version__.split('.'))):
+    class UnsupportedPythonError(Exception):
+        pass
+
     raise UnsupportedPythonError("astrowidgets does not support Python < {}".format(__minimum_python_version__))
 
 if not _ASTROPY_SETUP_:

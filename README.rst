@@ -21,15 +21,31 @@ Widgets for the Jupyter notebook and JupyterLab
 
 **Warning**
 
-``astrowidgets`` is currently in *very* early development.  Nothing is guaranteed to work or do anything in particular 
+``astrowidgets`` is currently in *very* early development.  Nothing is guaranteed to work or do anything in particular
 at this stage.
 
+
+Installation and Documentation
+------------------------------
+
+See https://astrowidgets.readthedocs.io/en/latest/ .
 
 License
 -------
 
-This project is Copyright (c) Astropy Developers and licensed under
-the terms of the BSD 3-Clause license. This package is based upon
-the `Astropy package template <https://github.com/astropy/package-template>`_
-which is licensed under the BSD 3-clause licence. See the licenses folder for
-more information.
+See ``LICENSE.rst``.
+
+
+Contributing
+------------
+
+Given the pre-alpha nature of this package, there is no established
+contributing guide. Please contact the maintainers for guidance.
+It is important that you follow our code of conduct; please see
+``CODE_OF_CONDUCT.md``.
+
+
+Changelog
+---------
+
+See ``CHANGES.rst``.
