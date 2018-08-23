@@ -54,10 +54,10 @@ Widget with Ginga Toolkit
 To use the widget with `Ginga <http://ginga.readthedocs.io>`_ toolkit,
 you also need to install:
 
-* ``ginga``
+* ``ginga>=2.7.1``
 * ``opencv``
 * ``pillow``
-* ``freetype = 2.8.1``
+* ``freetype``
 * ``aggdraw``
 
 .. note::
@@ -77,11 +77,8 @@ It is a known issue that ``FREETYPE_ROOT`` is not set properly if you do
 ``conda install aggdraw`` on Windows
 (https://github.com/conda-forge/freetype-feedstock/issues/12), which results
 in ``aggdraw cannot load font (no text renderer)`` error message when
-using the widget with Ginga toolkit. The solution is to install ``aggdraw``
-from source after modifying its ``setup.py`` to point ``FREETYPE_ROOT`` to
-the correct font library path; see https://github.com/ejeschke/ginga/issues/664
-and https://stackoverflow.com/questions/17770413/aggdraw-cannot-load-font-no-text-renderer
-for more details.
+using the widget with Ginga toolkit. The solution is to update to ``aggdraw``
+1.3.5 or later; e.g., ``conda install aggdraw=1.3.5``.
 
 nodejs
 ^^^^^^
