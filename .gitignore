@@ -16,6 +16,7 @@ htmlcov
 .coverage
 MANIFEST
 .ipynb_checkpoints
+example_notebooks/test.png
 
 # Sphinx
 docs/api
