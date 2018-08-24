@@ -652,11 +652,15 @@ class ImageWidget(ipyw.VBox):
     @cursor.setter
     def cursor(self, val):
         if val is None:
-            self._widget = self._jup_img
-        elif val == 'top':
-            self._widget = ipyw.VBox([self._jup_coord, self._jup_img])
-        elif val == 'bottom':
-            self._widget = ipyw.VBox([self._jup_img, self._jup_coord])
+            self._jup_coord.layout.visibility = 'hidden'
+            self._jup_coord.layout.display = 'none'
+        elif val == 'top' or val == 'bottom':
+            self._jup_coord.layout.visibility = 'visible'
+            self._jup_coord.layout.display = 'flex'
+            if val == 'top':
+                self.layout.flex_flow = 'column-reverse'
+            else:
+                self.layout.flex_flow = 'column'
         else:
             raise ValueError('Invalid value {} for cursor.'.format(val) +
                              'Valid values are: '
