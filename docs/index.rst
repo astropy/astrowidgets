@@ -55,10 +55,10 @@ To use the widget with `Ginga <http://ginga.readthedocs.io>`_ toolkit,
 you also need to install:
 
 * ``ginga>=2.7.1``
-* ``opencv``
 * ``pillow``
 * ``freetype``
 * ``aggdraw``
+* ``opencv`` (optional)
 
 .. note::
 

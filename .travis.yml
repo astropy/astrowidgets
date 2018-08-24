@@ -38,7 +38,7 @@ env:
 
         # List other runtime dependencies for the package that are available as
         # conda packages here.
-        - CONDA_DEPENDENCIES='ginga ipyevents pillow opencv-python'
+        - CONDA_DEPENDENCIES='ginga ipyevents pillow'
 
         # List other runtime dependencies for the package that are available as
         # pip packages here.

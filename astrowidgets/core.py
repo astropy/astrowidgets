@@ -2,6 +2,7 @@
 
 # STDLIB
 import functools
+import warnings
 
 # THIRD-PARTY
 import numpy as np
@@ -45,15 +46,19 @@ class ImageWidget(ipyw.VBox):
     use_opencv : bool
         Let Ginga use ``opencv`` to speed up image transformation;
         e.g., rotation and mosaic. If this is enabled and you
-        do not have ``opencv``, you will see ``ImportError``.
+        do not have ``opencv``, you will get a warning.
 
     """
     def __init__(self, logger=None, width=500, height=500, use_opencv=True):
         super().__init__()
+
         # TODO: Is this the best place for this?
         if use_opencv:
-            from ginga import trcalc
-            trcalc.use('opencv')
+            try:
+                from ginga import trcalc
+                trcalc.use('opencv')
+            except (ImportError, ModuleNotFoundError) as exc:
+                warnings.warn('install opencv or set use_opencv=False')
 
         self._viewer = EnhancedCanvasView(logger=logger)
         self._is_marking = False
