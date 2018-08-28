@@ -57,7 +57,7 @@ class ImageWidget(ipyw.VBox):
             try:
                 from ginga import trcalc
                 trcalc.use('opencv')
-            except (ImportError, ModuleNotFoundError) as exc:
+            except ImportError as exc:
                 warnings.warn('install opencv or set use_opencv=False')
 
         self._viewer = EnhancedCanvasView(logger=logger)
