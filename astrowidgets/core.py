@@ -1,59 +1,8 @@
+"""Module containing core functionality of ``astrowidgets``."""
 
-# Use this in the future?!
-# from stginga.jupyterw.widget import ImageWidget
-
-"""
-Dev notes
-=========
-
-GUI interactions:
-
-* Right clicking should do ds9-style stretch adjustment. (*not* the same as
-  the ``stretch`` property - here I mean "brightness/contrast" adjustment
-  within the bounds of a given stretch)
-* The user should be able to pan the view interactively.  This can be via
-  middle clicking on the new center, click-and-drag, or scrolling (i.e. with
-  touchpad a la what ginga does). The properties ``click_drag``,
-  ``click_center``, and ``scroll`` can turn on/off these options
-  (as does the "selection" mode).
-* Zooming - if ``scroll_pan`` is False (probably the default), zooming is via
-  the scroll wheel.
-* "Selection mode" - see ``select_points`` method.
-* If the user provides an NDData or fits input (assuming the fits file has
-  valid WCS), if the cursor is not turned off it shows both the pixel
-  coordinates and the WCS coordinates under the cursor.
-
-Initially, *no* keyboard shortcuts should be implemented.  Eventually there
-should be a clear mapping from keyboard shortcuts to methods, but until the
-methods are stabilized, the keyboard shortcuts should be avoided.
-
-Other requirements:
-
-* Should be able to hanle ~4k x 4k images without significant performance
-  lagging.
-* Should be able to handle ~1000x markers without significant performance
-  degredation.
-* Stretch goal: hould be able to handle ~10k x 10k images acceptable
-* Extra-stretchy goal: handle very large datasets using a "tiling" approach.
-  This will presumably require different ``load_*`` functions, and more
-  cleverness on the JS side.
-
-A few more notes:
-
-* We should be subclassing some kind of ipywidget,
-  likely Box is the best choice.
-* If we do that, then _repr_html is unnecessary (and undesirable), because
-  the widget machinery will take care of it.
-* Really like to avoid middle-click interactions, or at least I would like
-  them to have an alias that works on a trackpad or a two-button mouse.
-* I'd like a little more flexibility in adding markers (i.e., not necessarily
-  require the use of a table, though that should be one way to do it).
-* I also think we need at least minimal ability to change/set marker color,
-  shape very early on.
-
-"""
 # STDLIB
 import functools
+import warnings
 
 # THIRD-PARTY
 import numpy as np
@@ -97,15 +46,19 @@ class ImageWidget(ipyw.VBox):
     use_opencv : bool
         Let Ginga use ``opencv`` to speed up image transformation;
         e.g., rotation and mosaic. If this is enabled and you
-        do not have ``opencv``, you will see ``ImportError``.
+        do not have ``opencv``, you will get a warning.
 
     """
     def __init__(self, logger=None, width=500, height=500, use_opencv=True):
         super().__init__()
+
         # TODO: Is this the best place for this?
         if use_opencv:
-            from ginga import trcalc
-            trcalc.use('opencv')
+            try:
+                from ginga import trcalc
+                trcalc.use('opencv')
+            except ImportError as exc:
+                warnings.warn('install opencv or set use_opencv=False')
 
         self._viewer = EnhancedCanvasView(logger=logger)
         self._is_marking = False
