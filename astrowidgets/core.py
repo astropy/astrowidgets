@@ -59,7 +59,7 @@ class ImageWidget(ipyw.VBox):
             try:
                 from ginga import trcalc
                 trcalc.use('opencv')
-            except ImportError as exc:
+            except ImportError:
                 warnings.warn('install opencv or set use_opencv=False')
 
         self._viewer = EnhancedCanvasView(logger=logger)
@@ -665,9 +665,9 @@ class ImageWidget(ipyw.VBox):
             else:
                 self.layout.flex_flow = 'column'
         else:
-            raise ValueError('Invalid value {} for cursor.'.format(val) +
+            raise ValueError('Invalid value {} for cursor.'
                              'Valid values are: '
-                             '{}'.format(ALLOWED_CURSOR_LOCATIONS))
+                             '{}'.format(val, ALLOWED_CURSOR_LOCATIONS))
         self._cursor = val
 
     @property
