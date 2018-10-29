@@ -167,3 +167,9 @@ def test_save():
     image = ImageWidget()
     filename = 'woot.png'
     image.save(filename)
+
+
+def test_width_height():
+    image = ImageWidget(image_width=250, image_height=100)
+    assert image.image_width == 250
+    assert image.image_height == 100
