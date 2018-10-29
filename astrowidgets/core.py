@@ -548,8 +548,10 @@ class ImageWidget(ipyw.VBox):
             coord_y = table[y_colname].data
             # Convert data coordinates from 1-indexed to 0-indexed
             if pixel_coords_offset != 0:
-                coord_x -= pixel_coords_offset
-                coord_y -= pixel_coords_offset
+                # Don't use the in-place operator -= here...that modifies
+                # the input table.
+                coord_x = coord_x - pixel_coords_offset
+                coord_y = coord_y - pixel_coords_offset
 
         # Prepare canvas and retain existing marks
         objs = []
