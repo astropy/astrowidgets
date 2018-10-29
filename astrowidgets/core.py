@@ -50,7 +50,7 @@ class ImageWidget(ipyw.VBox):
 
     """
 
-    def __init__(self, logger=None, width=500, height=500,
+    def __init__(self, logger=None, image_width=500, image_height=500,
                  use_opencv=True):
         super().__init__()
 
@@ -80,15 +80,15 @@ class ImageWidget(ipyw.VBox):
         self._jup_img.height = 'auto'
 
         # Set the width of the box containing the image to the desired width
-        self.layout.width = str(width)
+        self.layout.width = str(image_width)
 
         # Note we are NOT setting the height. That is because the height
         # is automatically set by the image aspect ratio.
 
         # These need to also be set for now; ginga uses them to figure
         # out what size image to make.
-        self._jup_img.width = width
-        self._jup_img.height = height
+        self._jup_img.width = image_width
+        self._jup_img.height = image_height
 
         self._viewer.set_widget(self._jup_img)
 
@@ -131,6 +131,7 @@ class ImageWidget(ipyw.VBox):
         # widgets expect width/height as strings, but most users will not, so
         # do the conversion.
         self._jup_img.width = str(value)
+        self._viewer.set_window_size(self.image_width, self.image_height)
 
     @property
     def image_height(self):
@@ -141,6 +142,7 @@ class ImageWidget(ipyw.VBox):
         # widgets expect width/height as strings, but most users will not, so
         # do the conversion.
         self._jup_img.height = str(value)
+        self._viewer.set_window_size(self.image_width, self.image_height)
 
     def _mouse_move_cb(self, viewer, button, data_x, data_y):
         """
