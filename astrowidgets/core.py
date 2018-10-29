@@ -59,7 +59,7 @@ class ImageWidget(ipyw.VBox):
             try:
                 from ginga import trcalc
                 trcalc.use('opencv')
-            except ImportError as exc:
+            except ImportError:
                 warnings.warn('install opencv or set use_opencv=False')
 
         self._viewer = EnhancedCanvasView(logger=logger)
@@ -548,8 +548,10 @@ class ImageWidget(ipyw.VBox):
             coord_y = table[y_colname].data
             # Convert data coordinates from 1-indexed to 0-indexed
             if pixel_coords_offset != 0:
-                coord_x -= pixel_coords_offset
-                coord_y -= pixel_coords_offset
+                # Don't use the in-place operator -= here...that modifies
+                # the input table.
+                coord_x = coord_x - pixel_coords_offset
+                coord_y = coord_y - pixel_coords_offset
 
         # Prepare canvas and retain existing marks
         objs = []
@@ -663,9 +665,9 @@ class ImageWidget(ipyw.VBox):
             else:
                 self.layout.flex_flow = 'column'
         else:
-            raise ValueError('Invalid value {} for cursor.'.format(val) +
+            raise ValueError('Invalid value {} for cursor.'
                              'Valid values are: '
-                             '{}'.format(ALLOWED_CURSOR_LOCATIONS))
+                             '{}'.format(val, ALLOWED_CURSOR_LOCATIONS))
         self._cursor = val
 
     @property
