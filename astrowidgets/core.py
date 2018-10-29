@@ -464,7 +464,8 @@ class ImageWidget(ipyw.VBox):
         xy_col = np.asarray(xy_col)  # [[x0, y0], [x1, y1], ...]
 
         if include_skycoord:
-            radec_col = np.asarray(radec_col)  # [[ra0, dec0], [ra1, dec1], ...]
+            # [[ra0, dec0], [ra1, dec1], ...]
+            radec_col = np.asarray(radec_col)
 
             # Fill in X,Y from RA,DEC
             mask = np.isnan(xy_col[:, 0])  # One bool per row
