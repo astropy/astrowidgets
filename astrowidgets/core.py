@@ -538,10 +538,11 @@ class ImageWidget(ipyw.VBox):
                 raise ValueError(
                     'Image has no valid WCS, '
                     'try again with use_skycoord=False')
-            coord_type = 'wcs'
             coord_val = table[skycoord_colname]
-            coord_x = coord_val.ra.deg
-            coord_y = coord_val.dec.deg
+            coord_x, coord_y = image.wcs.wcs.all_world2pix(coord_val.ra.deg,
+                                                           coord_val.dec.deg,
+                                                           0)
+            coord_type = 'data'
         else:  # Use X,Y
             coord_type = 'data'
             coord_x = table[x_colname].data
