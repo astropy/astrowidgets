@@ -41,7 +41,8 @@ def test_adding_markers_as_world_recovers_with_get_markers():
     wcs.wcs.crpix = (fake_image.shape[0] / 2, fake_image.shape[1] / 2)
     wcs.wcs.ctype = ('RA---TAN', 'DEC--TAN')
     wcs.wcs.crval = (314.275419158, 31.6662781301)
-    wcs.wcs.pc = [[0.000153051015113,  -3.20700931602e-05], [3.20704370872e-05, 0.000153072382405]]
+    wcs.wcs.pc = [[0.000153051015113, -3.20700931602e-05],
+                  [3.20704370872e-05, 0.000153072382405]]
     fake_ccd = CCDData(data=fake_image, wcs=wcs, unit='adu')
     iw = ImageWidget()
     iw.load_nddata(fake_ccd)
@@ -56,5 +57,7 @@ def test_adding_markers_as_world_recovers_with_get_markers():
     # Check the x, y positions as long as we are testing things...
     np.testing.assert_allclose(result['x'], marks_pix['x'])
     np.testing.assert_allclose(result['y'], marks_pix['y'])
-    np.testing.assert_allclose(result['coord'].ra.deg, mark_coord_table['coord'].ra.deg)
-    np.testing.assert_allclose(result['coord'].dec.deg, mark_coord_table['coord'].dec.deg)
+    np.testing.assert_allclose(result['coord'].ra.deg,
+                               mark_coord_table['coord'].ra.deg)
+    np.testing.assert_allclose(result['coord'].dec.deg,
+                               mark_coord_table['coord'].dec.deg)
