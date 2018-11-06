@@ -528,6 +528,11 @@ class ImageWidget(ipyw.VBox):
 
         """
         # TODO: Resolve https://github.com/ejeschke/ginga/issues/672
+
+        # For now we always convert marker locations to pixels; see
+        # comment below.
+        coord_type = 'data'
+
         # Extract coordinates from table.
         # They are always arrays, not scalar.
         if use_skycoord:
@@ -539,12 +544,14 @@ class ImageWidget(ipyw.VBox):
                     'Image has no valid WCS, '
                     'try again with use_skycoord=False')
             coord_val = table[skycoord_colname]
+            # TODO: Maybe switch back to letting ginga handle conversion
+            #       to pixel coordinates.
+            # Convert to pixels here (instead of in ginga) because conversion
+            # in ginga is currently very slow.
             coord_x, coord_y = image.wcs.wcs.all_world2pix(coord_val.ra.deg,
                                                            coord_val.dec.deg,
                                                            0)
-            coord_type = 'data'
         else:  # Use X,Y
-            coord_type = 'data'
             coord_x = table[x_colname].data
             coord_y = table[y_colname].data
             # Convert data coordinates from 1-indexed to 0-indexed

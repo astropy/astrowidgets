@@ -36,7 +36,8 @@ def test_adding_markers_as_world_recovers_with_get_markers():
     Make sure that our internal conversion from world to pixel
     coordinates doesn't mess anything up.
     """
-    fake_image = np.random.randn(2000, 2000)
+    npix_side = 100
+    fake_image = np.random.randn(npix_side, npix_side)
     wcs = WCS(naxis=2)
     wcs.wcs.crpix = (fake_image.shape[0] / 2, fake_image.shape[1] / 2)
     wcs.wcs.ctype = ('RA---TAN', 'DEC--TAN')
@@ -46,8 +47,10 @@ def test_adding_markers_as_world_recovers_with_get_markers():
     fake_ccd = CCDData(data=fake_image, wcs=wcs, unit='adu')
     iw = ImageWidget()
     iw.load_nddata(fake_ccd)
-    # Get me 1000 positions please
-    marker_locs = np.random.randint(10, high=1990, size=(1000, 2))
+    # Get me 100 positions please, not right at the edge
+    marker_locs = np.random.randint(10,
+                                    high=npix_side - 10,
+                                    size=(100, 2))
     marks_pix = Table(data=marker_locs, names=['x', 'y'])
     marks_world = wcs.all_pix2world(marker_locs, 0)
     marks_coords = SkyCoord(marks_world, unit='degree')
