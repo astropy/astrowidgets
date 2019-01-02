@@ -48,10 +48,16 @@ class ImageWidget(ipyw.VBox):
         e.g., rotation and mosaic. If this is enabled and you
         do not have ``opencv``, you will get a warning.
 
+    pixel_coords_offset : int, optional
+        An offset, typically either 0 or 1, to add/subtract to all
+        pixel values when going to/from the displayed image.
+        *In almost all situations the default value, ``0``, is the
+        correct value to use.*
+
     """
 
     def __init__(self, logger=None, image_width=500, image_height=500,
-                 use_opencv=True):
+                 use_opencv=True, pixel_coords_offset=0):
         super().__init__()
 
         # TODO: Is this the best place for this?
@@ -65,6 +71,8 @@ class ImageWidget(ipyw.VBox):
         self._viewer = EnhancedCanvasView(logger=logger)
         self._is_marking = False
         self._click_center = False
+
+        self._pixel_offset = pixel_coords_offset
 
         self._jup_img = ipyw.Image(format='jpeg')
 
@@ -144,6 +152,18 @@ class ImageWidget(ipyw.VBox):
         self._jup_img.height = str(value)
         self._viewer.set_window_size(self.image_width, self.image_height)
 
+    @property
+    def pixel_offset(self):
+        """
+        An offset, typically either 0 or 1, to add/subtract to all
+        pixel values when going to/from the displayed image.
+        *In almost all situations the default value, ``0``, is the
+        correct value to use.*
+
+        This value cannot be modified after initialization.
+        """
+        return self._pixel_offset
+
     def _mouse_move_cb(self, viewer, button, data_x, data_y):
         """
         Callback to display position in RA/DEC deg.
@@ -157,11 +177,12 @@ class ImageWidget(ipyw.VBox):
             iy = int(data_y + 0.5)
             try:
                 imval = viewer.get_data(ix, iy)
+                imval = '{:8.3f}'.format(imval)
             except Exception:
                 imval = 'N/A'
 
-            # Same as setting pixel_coords_offset=1 in general.cfg
-            val = 'X: {:.2f}, Y:{:.2f}'.format(data_x + 1, data_y + 1)
+            val = 'X: {:.2f}, Y: {:.2f}'.format(data_x + self._pixel_offset,
+                                                data_y + self._pixel_offset)
             if image.wcs.wcs is not None:
                 ra, dec = image.pixtoradec(data_x, data_y)
                 val += ' (RA: {}, DEC: {})'.format(
@@ -196,7 +217,8 @@ class ImageWidget(ipyw.VBox):
             self.center_on((data_x, data_y))
 
             with self.print_out:
-                print('Centered on X={} Y={}'.format(data_x + 1, data_y + 1))
+                print('Centered on X={} Y={}'.format(data_x + self._pixel_offset,
+                                                     data_y + self._pixel_offset))
 
 #     def _repr_html_(self):
 #         """
@@ -275,7 +297,7 @@ class ImageWidget(ipyw.VBox):
         """
         self._viewer.load_data(arr)
 
-    def center_on(self, point, pixel_coords_offset=1):
+    def center_on(self, point):
         """
         Centers the view on a particular point.
 
@@ -284,17 +306,11 @@ class ImageWidget(ipyw.VBox):
         point : tuple or `~astropy.coordinates.SkyCoord`
             If tuple of ``(X, Y)`` is given, it is assumed
             to be in data coordinates.
-
-        pixel_coords_offset : {0, 1}
-            Data coordinates provided are n-indexed,
-            where n is the given value.
-            This is ignored if ``SkyCoord`` is provided.
-
         """
         if isinstance(point, SkyCoord):
             self._viewer.set_pan(point.ra.deg, point.dec.deg, coord='wcs')
         else:
-            self._viewer.set_pan(*(np.asarray(point) - pixel_coords_offset))
+            self._viewer.set_pan(*(np.asarray(point) - self._pixel_offset))
 
     def offset_to(self, dx, dy, skycoord_offset=False):
         """
@@ -405,7 +421,6 @@ class ImageWidget(ipyw.VBox):
                 'Marker type "{}" not supported'.format(marker_type))
 
     def get_markers(self, x_colname='x', y_colname='y',
-                    pixel_coords_offset=1,
                     skycoord_colname='coord'):
         """
         Return the locations of existing markers.
@@ -415,11 +430,7 @@ class ImageWidget(ipyw.VBox):
         x_colname, y_colname : str
             Column names for X and Y data coordinates.
             Coordinates returned are 0- or 1-indexed, depending
-            on ``pixel_coords_offset``.
-
-        pixel_coords_offset : {0, 1}
-            Data coordinates returned are n-indexed,
-            where n is the given value.
+            on ``self.pixel_offset``.
 
         skycoord_colname : str
             Column name for ``SkyCoord``, which contains
@@ -480,8 +491,8 @@ class ImageWidget(ipyw.VBox):
             sky_col = SkyCoord(radec_col[:, 0], radec_col[:, 1], unit='deg')
 
         # Convert X,Y from 0-indexed to 1-indexed
-        if pixel_coords_offset != 0:
-            xy_col += pixel_coords_offset
+        if self._pixel_offset != 0:
+            xy_col += self._pixel_offset
 
         # Build table
         if include_skycoord:
@@ -494,7 +505,6 @@ class ImageWidget(ipyw.VBox):
         return markers_table
 
     def add_markers(self, table, x_colname='x', y_colname='y',
-                    pixel_coords_offset=1,
                     skycoord_colname='coord', use_skycoord=False):
         """
         Creates markers in the image at given points.
@@ -512,12 +522,7 @@ class ImageWidget(ipyw.VBox):
         x_colname, y_colname : str
             Column names for X and Y.
             Coordinates can be 0- or 1-indexed, as
-            given by ``pixel_coords_offset``.
-
-        pixel_coords_offset : {0, 1}
-            Data coordinates provided are n-indexed,
-            where n is the given value.
-            This is ignored if ``use_skycoord=True``.
+            given by ``self.pixel_offset``.
 
         skycoord_colname : str
             Column name with ``SkyCoord`` objects.
@@ -555,11 +560,11 @@ class ImageWidget(ipyw.VBox):
             coord_x = table[x_colname].data
             coord_y = table[y_colname].data
             # Convert data coordinates from 1-indexed to 0-indexed
-            if pixel_coords_offset != 0:
+            if self._pixel_offset != 0:
                 # Don't use the in-place operator -= here...that modifies
                 # the input table.
-                coord_x = coord_x - pixel_coords_offset
-                coord_y = coord_y - pixel_coords_offset
+                coord_x = coord_x - self._pixel_offset
+                coord_y = coord_y - self._pixel_offset
 
         # Prepare canvas and retain existing marks
         objs = []
