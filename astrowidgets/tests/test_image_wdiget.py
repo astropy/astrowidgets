@@ -48,7 +48,7 @@ def test_adding_markers_as_world_recovers_with_get_markers():
     wcs.wcs.pc = [[0.000153051015113, -3.20700931602e-05],
                   [3.20704370872e-05, 0.000153072382405]]
     fake_ccd = CCDData(data=fake_image, wcs=wcs, unit='adu')
-    iw = ImageWidget()
+    iw = ImageWidget(pixel_coords_offset=0)
     iw.load_nddata(fake_ccd)
     # Get me 100 positions please, not right at the edge
     marker_locs = np.random.randint(10,
@@ -59,7 +59,7 @@ def test_adding_markers_as_world_recovers_with_get_markers():
     marks_coords = SkyCoord(marks_world, unit='degree')
     mark_coord_table = Table(data=[marks_coords], names=['coord'])
     iw.add_markers(mark_coord_table, use_skycoord=True)
-    result = iw.get_markers(pixel_coords_offset=0)
+    result = iw.get_markers()
     # Check the x, y positions as long as we are testing things...
     np.testing.assert_allclose(result['x'], marks_pix['x'])
     np.testing.assert_allclose(result['y'], marks_pix['y'])
