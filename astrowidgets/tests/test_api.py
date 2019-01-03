@@ -104,6 +104,15 @@ def test_reset_markers():
     # TODO add test of actually removing markers...
 
 
+def test_remove_markers():
+    image = ImageWidget()
+    # Add a tag name...
+    image._marktags.add(image._default_mark_tag_name)
+    with pytest.raises(ValueError) as e:
+        image.remove_markers('arf')
+    assert 'arf' in str(e)
+
+
 def test_stretch():
     image = ImageWidget()
     with pytest.raises(ValueError) as e:

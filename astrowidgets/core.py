@@ -112,6 +112,12 @@ class ImageWidget(ipyw.VBox):
         # Marker
         self.marker = {'type': 'circle', 'color': 'cyan', 'radius': 20}
         self._marktag = 'marktag'
+        # Maintain marker tags as a set because we do not want
+        # duplicate names.
+        self._marktags = set()
+        # Let's have a default name for the tag too:
+        self._default_mark_tag_name = 'default-marker-name'
+        self._interactive_marker_set_name = 'interactive-markers'
 
         # coordinates display
         self._jup_coord = ipyw.HTML('Coordinates show up here')
@@ -195,23 +201,27 @@ class ImageWidget(ipyw.VBox):
         Callback to handle mouse clicks.
         """
         if self.is_marking:
+            marker_name = self._interactive_marker_set_name
             objs = []
             try:
-                c_mark = viewer.canvas.get_object_by_tag(self._marktag)
+                c_mark = viewer.canvas.get_object_by_tag(marker_name)
             except Exception:  # Nothing drawn yet
                 pass
             else:  # Add to existing marks
                 objs = c_mark.objects
-                viewer.canvas.delete_object_by_tag(self._marktag)
+                viewer.canvas.delete_object_by_tag(marker_name)
 
             # NOTE: By always using CompoundObject, marker handling logic
             # is simplified.
             obj = self.marker(x=data_x, y=data_y)
             objs.append(obj)
-            self._marktag = viewer.canvas.add(self.dc.CompoundObject(*objs))
-
+            self._marktag = viewer.canvas.add(self.dc.CompoundObject(*objs),
+                                              tag=marker_name)
+            self._marktags.add(marker_name)
             with self.print_out:
                 print('Selected {} {}'.format(obj.x, obj.y))
+                print('Marker name is {}'.format(marker_name))
+                print(self._marktag)
 
         elif self.click_center:
             self.center_on((data_x, data_y))
@@ -421,7 +431,8 @@ class ImageWidget(ipyw.VBox):
                 'Marker type "{}" not supported'.format(marker_type))
 
     def get_markers(self, x_colname='x', y_colname='y',
-                    skycoord_colname='coord'):
+                    skycoord_colname='coord',
+                    marker_name=None):
         """
         Return the locations of existing markers.
 
@@ -443,8 +454,11 @@ class ImageWidget(ipyw.VBox):
             Table of markers, if any, or ``None``.
 
         """
+        if marker_name is None:
+            marker_name = self._default_mark_tag_name
+
         try:
-            c_mark = self._viewer.canvas.get_object_by_tag(self._marktag)
+            c_mark = self._viewer.canvas.get_object_by_tag(marker_name)
         except Exception as e:  # No markers
             self.logger.warning(str(e))
             return
@@ -506,7 +520,8 @@ class ImageWidget(ipyw.VBox):
         return markers_table
 
     def add_markers(self, table, x_colname='x', y_colname='y',
-                    skycoord_colname='coord', use_skycoord=False):
+                    skycoord_colname='coord', use_skycoord=False,
+                    marker_name=None):
         """
         Creates markers in the image at given points.
 
@@ -532,12 +547,20 @@ class ImageWidget(ipyw.VBox):
             If `True`, use ``skycoord_colname`` to mark.
             Otherwise, use ``x_colname`` and ``y_colname``.
 
+        marker_name : str, optional
+            Name to assign the markers in the table. Providing a name
+            allows markers to be removed by name at a later time.
         """
         # TODO: Resolve https://github.com/ejeschke/ginga/issues/672
 
         # For now we always convert marker locations to pixels; see
         # comment below.
         coord_type = 'data'
+
+        if marker_name is None:
+            marker_name = self._default_mark_tag_name
+
+        self._marktags.add(marker_name)
 
         # Extract coordinates from table.
         # They are always arrays, not scalar.
@@ -570,41 +593,65 @@ class ImageWidget(ipyw.VBox):
         # Prepare canvas and retain existing marks
         objs = []
         try:
-            c_mark = self._viewer.canvas.get_object_by_tag(self._marktag)
+            c_mark = self._viewer.canvas.get_object_by_tag(marker_name)
         except Exception:
             pass
         else:
             objs = c_mark.objects
-            self._viewer.canvas.delete_object_by_tag(self._marktag)
+            self._viewer.canvas.delete_object_by_tag(marker_name)
 
         # TODO: Test to see if we can mix WCS and data on the same canvas
         objs += [self.marker(x=x, y=y, coord=coord_type)
                  for x, y in zip(coord_x, coord_y)]
-        self._marktag = self._viewer.canvas.add(self.dc.CompoundObject(*objs))
+        self._viewer.canvas.add(self.dc.CompoundObject(*objs),
+                                tag=marker_name)
 
     # TODO: Future work?
-    def remove_markers(self, arr):
+    def remove_markers(self, marker_name=None):
         """
-        Remove some but not all of the markers.
+        Remove some but not all of the markers by name used when
+        adding the markers
 
         Parameters
         ----------
-        arr : ``SkyCoord`` or array-like
-            Sky coordinates or 2xN array.
 
+        marker_name : str, optional
+            Name used when the markers were added.
         """
+        # TODO:
+        #   arr : ``SkyCoord`` or array-like
+        #   Sky coordinates or 2xN array.
+        #
         # NOTE: How to match? Use np.isclose?
         #       What if there are 1-to-many matches?
-        return NotImplementedError
+
+        if marker_name is None:
+            marker_name = self._default_mark_tag_name
+
+        if marker_name not in self._marktags:
+            # This shouldn't have happened, raise an error
+            raise ValueError('Marker name {} not found in current markers.'
+                             ' Markers currently in use are '
+                             '{}'.format(marker_name,
+                                         sorted(self._marktags)))
+
+        try:
+            self._viewer.canvas.delete_object_by_tag(marker_name)
+        except KeyError:
+            raise KeyError('Unable to remove markers named {} from image. '
+                           ''.format(marker_name))
+        else:
+            self._marktags.remove(marker_name)
 
     def reset_markers(self):
         """
         Delete all markers.
         """
-        try:
-            self._viewer.canvas.delete_object_by_tag(self._marktag)
-        except Exception:
-            pass
+
+        # Grab the entire list of marker names before iterating
+        # otherwise what we are iterating over changes.
+        for marker_name in list(self._marktags):
+            self.remove_markers(marker_name)
 
     @property
     def stretch_options(self):

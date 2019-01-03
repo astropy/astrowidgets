@@ -101,3 +101,60 @@ def test_move_callback_includes_offset():
     assert float(x_out) == data_x + offset
     assert float(y_out) == data_y + offset
     # image.print_out.get_state()['outputs']
+
+
+def test_can_add_markers_with_names():
+    """
+    Test a few things related to naming marker sets
+    """
+    npix_side = 200
+    image = ImageWidget(image_width=npix_side,
+                        image_height=npix_side)
+    x = np.array([20, 30, 40])
+    y = np.array([40, 80, 100])
+
+    # This should succeed without error
+    image.add_markers(Table(data=[x, y], names=['x', 'y']),
+                      marker_name='nonsense')
+
+    # The name 'nonsense', and nothing else, should be in the
+    # set of markers.
+    assert set(['nonsense']) == image._marktags
+
+    # Add more markers with the same name
+    # This should succeed without error
+    image.add_markers(Table(data=[x, y], names=['x', 'y']),
+                      marker_name='nonsense')
+
+    # check that we get the right number of markers
+    marks = image.get_markers(marker_name='nonsense')
+    assert len(marks) == 6
+
+    # Make sure setting didn't change the default name
+    assert image._default_mark_tag_name == 'default-marker-name'
+
+    # Try adding markers without a name
+    image.add_markers(Table(data=[x, y], names=['x', 'y']))
+    assert image._marktags == set(['nonsense', image._default_mark_tag_name])
+
+    # Delete just the nonsense markers
+    image.remove_markers('nonsense')
+
+    assert 'nonsense' not in image._marktags
+    assert image._default_mark_tag_name in image._marktags
+
+    # Add the nonsense markers back...
+    image.add_markers(Table(data=[x, y], names=['x', 'y']),
+                      marker_name='nonsense')
+    # ...and now delete all of the markers
+    image.reset_markers()
+    # We should have no markers on the image
+    assert image._marktags == set()
+
+    # Simulate a mouse click and make sure the expected marker
+    # name has been added.
+    data_x = 50
+    data_y = 50
+    image.is_marking = True
+    image._mouse_click_cb(image._viewer, None, data_x, data_y)
+    assert image._interactive_marker_set_name in image._marktags
