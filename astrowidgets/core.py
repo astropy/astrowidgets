@@ -452,7 +452,8 @@ class ImageWidget(ipyw.VBox):
         image = self._viewer.get_image()
         xy_col = []
 
-        if image.wcs.wcs is None:  # Do not include SkyCoord column
+        if (image is None) or (image.wcs.wcs is None):
+            # Do not include SkyCoord column
             include_skycoord = False
         else:
             include_skycoord = True
