@@ -220,8 +220,6 @@ class ImageWidget(ipyw.VBox):
             self._marktags.add(marker_name)
             with self.print_out:
                 print('Selected {} {}'.format(obj.x, obj.y))
-                print('Marker name is {}'.format(marker_name))
-                print(self._marktag)
 
         elif self.click_center:
             self.center_on((data_x, data_y))
