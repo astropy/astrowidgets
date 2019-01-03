@@ -501,7 +501,7 @@ class ImageWidget(ipyw.VBox):
                 [xy_col[:, 0], xy_col[:, 1], sky_col],
                 names=(x_colname, y_colname, skycoord_colname))
         else:
-            markers_table = Table(xy_col.T, names=(x_colname, y_colname))
+            markers_table = Table(xy_col, names=(x_colname, y_colname))
 
         return markers_table
 
