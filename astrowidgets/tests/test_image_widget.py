@@ -1,12 +1,13 @@
 import re
 
+import pytest
 import numpy as np
-from astropy.table import Table
+from astropy.table import Table, vstack
 from astropy.wcs import WCS
 from astropy.nddata import CCDData
 from astropy.coordinates import SkyCoord
 
-from ..core import ImageWidget
+from ..core import ImageWidget, RESERVED_MARKER_SET_NAMES
 
 
 def test_setting_image_width_height():
@@ -158,3 +159,61 @@ def test_can_add_markers_with_names():
     image.is_marking = True
     image._mouse_click_cb(image._viewer, None, data_x, data_y)
     assert image._interactive_marker_set_name in image._marktags
+
+
+def test_mark_with_reserved_name_raises_error():
+    npix_side = 200
+    image = ImageWidget(image_width=npix_side,
+                        image_height=npix_side)
+    x = np.array([20, 30, 40])
+    y = np.array([40, 80, 100])
+    for name in RESERVED_MARKER_SET_NAMES:
+        with pytest.raises(ValueError):
+            image.add_markers(Table(data=[x, y], names=['x', 'y']),
+                              marker_name=name)
+
+
+def test_get_marker_with_names():
+    # Check a few ways of getting markers out
+    npix_side = 200
+    image = ImageWidget(image_width=npix_side,
+                        image_height=npix_side)
+
+    x = np.array([20, 30, 40])
+    y = np.array([40, 80, 100])
+    input_markers = Table(data=[x, y], names=['x', 'y'])
+    # Add some markers with our own name
+    image.add_markers(input_markers, marker_name='nonsense')
+
+    # Add same markers without a name so that name defaults to
+    # image._default_mark_tag_name
+    image.add_markers(input_markers)
+
+    # Add pseudo-interactive points
+    image.is_marking = True
+    for data_x, data_y in input_markers:
+        image._mouse_click_cb(image._viewer, None, data_x, data_y)
+
+    # Should have three sets of markers: nonsense, default non-interactive,
+    # interactive
+    assert len(image._marktags) == 3
+
+    for marker in image._marktags:
+        out_table = image.get_markers(marker_name=marker)
+        # No guarantee markers will come back in the same order, so sort them.
+        out_table.sort('x')
+        assert (out_table['x'] == input_markers['x']).all()
+        assert (out_table['y'] == input_markers['y']).all()
+
+    # Get all of markers at once
+    all_marks = image.get_markers(marker_name='all')
+
+    # That should have given us three copies of the input table
+    expected = vstack([input_markers] * 3, join_type='exact')
+
+    # Sort before comparing
+    expected.sort(['x', 'y'])
+    all_marks.sort(['x', 'y'])
+
+    assert (expected['x'] == all_marks['x']).all()
+    assert (expected['y'] == all_marks['y']).all()

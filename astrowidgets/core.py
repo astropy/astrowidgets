@@ -8,7 +8,7 @@ import warnings
 import numpy as np
 from astropy.coordinates import SkyCoord
 from astropy.io import fits
-from astropy.table import Table
+from astropy.table import Table, vstack
 
 # Jupyter widgets
 import ipywidgets as ipyw
@@ -23,6 +23,9 @@ __all__ = ['ImageWidget']
 
 # Allowed locations for cursor display
 ALLOWED_CURSOR_LOCATIONS = ['top', 'bottom', None]
+
+# A couple of marker names are for internal use only
+RESERVED_MARKER_SET_NAMES = ['all']
 
 
 class ImageWidget(ipyw.VBox):
@@ -455,6 +458,15 @@ class ImageWidget(ipyw.VBox):
         if marker_name is None:
             marker_name = self._default_mark_tag_name
 
+        if marker_name == 'all':
+            tables = [self.get_markers(x_colname=x_colname,
+                                       y_colname=y_colname,
+                                       skycoord_colname=skycoord_colname,
+                                       marker_name=name)
+                      for name in self._marktags
+            ]
+            return vstack(tables, join_type='exact')
+
         try:
             c_mark = self._viewer.canvas.get_object_by_tag(marker_name)
         except Exception as e:  # No markers
@@ -557,6 +569,12 @@ class ImageWidget(ipyw.VBox):
 
         if marker_name is None:
             marker_name = self._default_mark_tag_name
+
+        if marker_name in RESERVED_MARKER_SET_NAMES:
+            raise ValueError('The marker name {} is not allowed. Any name is '
+                             'allowed except these: '
+                             '{}'.format(marker_name,
+                                         ', '.join(RESERVED_MARKER_SET_NAMES)))
 
         self._marktags.add(marker_name)
 
