@@ -463,8 +463,7 @@ class ImageWidget(ipyw.VBox):
                                        y_colname=y_colname,
                                        skycoord_colname=skycoord_colname,
                                        marker_name=name)
-                      for name in self._marktags
-            ]
+                      for name in self._marktags]
             return vstack(tables, join_type='exact')
 
         try:
