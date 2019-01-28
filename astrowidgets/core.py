@@ -24,7 +24,7 @@ __all__ = ['ImageWidget']
 # Allowed locations for cursor display
 ALLOWED_CURSOR_LOCATIONS = ['top', 'bottom', None]
 
-# A couple of marker names are for internal use only
+# List of marker names that are for internal use only
 RESERVED_MARKER_SET_NAMES = ['all']
 
 
@@ -114,7 +114,6 @@ class ImageWidget(ipyw.VBox):
 
         # Marker
         self.marker = {'type': 'circle', 'color': 'cyan', 'radius': 20}
-        self._marktag = 'marktag'
         # Maintain marker tags as a set because we do not want
         # duplicate names.
         self._marktags = set()
@@ -218,8 +217,8 @@ class ImageWidget(ipyw.VBox):
             # is simplified.
             obj = self.marker(x=data_x, y=data_y)
             objs.append(obj)
-            self._marktag = viewer.canvas.add(self.dc.CompoundObject(*objs),
-                                              tag=marker_name)
+            viewer.canvas.add(self.dc.CompoundObject(*objs),
+                              tag=marker_name)
             self._marktags.add(marker_name)
             with self.print_out:
                 print('Selected {} {}'.format(obj.x, obj.y))

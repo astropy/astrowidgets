@@ -94,14 +94,12 @@ def test_move_callback_includes_offset():
     data_y = 200
     image._mouse_move_cb(image._viewer, None, data_x, data_y)
     output_contents = image._jup_coord.value
-    print(output_contents)
     x_out = re.search(r'X: ([\d\.\d]+)', output_contents)
     x_out = x_out.groups(1)[0]
     y_out = re.search(r'Y: ([\d\.\d]+)', output_contents)
     y_out = y_out.groups(1)[0]
     assert float(x_out) == data_x + offset
     assert float(y_out) == data_y + offset
-    # image.print_out.get_state()['outputs']
 
 
 def test_can_add_markers_with_names():
