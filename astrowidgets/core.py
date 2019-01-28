@@ -640,7 +640,6 @@ class ImageWidget(ipyw.VBox):
         self._viewer.canvas.add(self.dc.CompoundObject(*objs),
                                 tag=marker_name)
 
-    # TODO: Future work?
     def remove_markers(self, marker_name=None):
         """
         Remove some but not all of the markers by name used when
