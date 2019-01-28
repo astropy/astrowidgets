@@ -459,12 +459,32 @@ class ImageWidget(ipyw.VBox):
             marker_name = self._default_mark_tag_name
 
         if marker_name == 'all':
-            tables = [self.get_markers(x_colname=x_colname,
-                                       y_colname=y_colname,
-                                       skycoord_colname=skycoord_colname,
-                                       marker_name=name)
-                      for name in self._marktags]
-            return vstack(tables, join_type='exact')
+            # If it wasn't for the fact that SKyCoord columns can't
+            # be stacked this would all fit nicely into a list
+            # comprehension. But they can't, so we delete the
+            # SkyCoord column if it is present, then add it
+            # back after we have stacked.
+            coordinates = []
+            tables = []
+            for name in self._marktags:
+                table = self.get_markers(x_colname=x_colname,
+                                         y_colname=y_colname,
+                                         skycoord_colname=skycoord_colname,
+                                         marker_name=name)
+                try:
+                    coordinates.extend(c for c in table[skycoord_colname])
+                except KeyError:
+                    pass
+                else:
+                    del table[skycoord_colname]
+                tables.append(table)
+
+            stacked = vstack(tables, join_type='exact')
+
+            if coordinates:
+                stacked[skycoord_colname] = SkyCoord(coordinates)
+
+            return stacked
 
         try:
             c_mark = self._viewer.canvas.get_object_by_tag(marker_name)
