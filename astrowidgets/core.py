@@ -739,6 +739,25 @@ class ImageWidget(ipyw.VBox):
             self._viewer.cut_levels(val[0], val[1])
 
     @property
+    def colormap_options(self):
+        """List of colormap names."""
+        from ginga import cmap
+        return cmap.get_names()
+
+    def set_colormap(self, cmap):
+        """
+        Set colormap to the given colormap name.
+
+        Parameters
+        ----------
+        cmap : str
+            Colormap name. Possible values can be obtained from
+            :meth:`colormap_options`.
+
+        """
+        self._viewer.set_color_map(cmap)
+
+    @property
     def cursor(self):
         """
         Show or hide cursor information (X, Y, WCS).
