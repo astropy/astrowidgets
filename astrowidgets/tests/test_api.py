@@ -146,6 +146,15 @@ def test_cuts():
     assert image.cuts == (10, 100)
 
 
+def test_colormap():
+    image = ImageWidget()
+    cmap_desired = 'gray'
+    cmap_list = image.colormap_options
+    assert len(cmap_list) > 0 and cmap_desired in cmap_list
+
+    image.set_colormap(cmap_desired)
+
+
 def test_cursor():
     image = ImageWidget()
     assert image.cursor in ALLOWED_CURSOR_LOCATIONS
