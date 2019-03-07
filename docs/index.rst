@@ -16,12 +16,15 @@ Installation
 
 Currently, ``astrowidgets`` are only available via GitHub::
 
-    pip install https://github.com/astropy/astrowidgets.git@master
+    pip install git+https://github.com/astropy/astrowidgets.git@master
 
 .. note::
 
-    If you are having problem even with the following dependencies installed,
-    please make sure you have the most up-to-date versions.
+    If you are using a virtual environment and
+    are experiencing problems with the installation, be sure to check and use
+    the suitable pip version. Also, if you are having problem even with the following 
+    dependencies installed, please make sure you have the most up-to-date versions. 
+    Upgrade dependencies when and where necessary.
 
 The following dependencies are needed *in the kernel of execution*
 to use ``astrowidgets`` in either Jupyter Lab or Notebook:
