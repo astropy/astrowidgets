@@ -417,6 +417,8 @@ class ImageWidget(ipyw.VBox):
         Marker can be set as follows::
 
             {'type': 'circle', 'color': 'cyan', 'radius': 20}
+            {'type': 'cross', 'color': 'green', 'radius': 20}
+            {'type': 'plus', 'color': 'red', 'radius': 20}
 
         """
         return self._marker
@@ -426,6 +428,14 @@ class ImageWidget(ipyw.VBox):
         marker_type = val.pop('type')
         if marker_type == 'circle':
             self._marker = functools.partial(self.dc.Circle, **val)
+        elif marker_type == 'plus':
+            val['type'] = 'point'
+            val['style'] = 'plus'
+            self._marker = functools.partial(self.dc.Point, **val)
+        elif marker_type == 'cross':
+            val['type'] = 'point'
+            val['style'] = 'cross'
+            self._marker = functools.partial(self.dc.Point, **val)
         else:  # TODO: Implement more shapes
             raise NotImplementedError(
                 'Marker type "{}" not supported'.format(marker_type))
