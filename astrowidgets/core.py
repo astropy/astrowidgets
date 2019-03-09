@@ -32,8 +32,6 @@ class ImageWidget(ipyw.VBox):
     """
     Image widget for Jupyter notebook using Ginga viewer.
 
-    .. todo:: Any property passed to constructor has to be valid keyword.
-
     Parameters
     ----------
     logger : obj or ``None``
@@ -62,6 +60,14 @@ class ImageWidget(ipyw.VBox):
     def __init__(self, logger=None, image_width=500, image_height=500,
                  use_opencv=True, pixel_coords_offset=0):
         super().__init__()
+
+        if not isinstance(use_opencv, bool):
+            raise TypeError('argument use_opencv must be the type bool')
+        args_name = ['image_width', 'image_height', 'pixel_coords_offset']
+        type_check = [image_width, image_height, pixel_coords_offset]
+        for x in range(len(type_check)):
+            if not isinstance(type_check[x], int) or isinstance(type_check[x], bool):
+                raise TypeError('argument {} must be the type int'.format(args_name[x]))
 
         # TODO: Is this the best place for this?
         if use_opencv:
