@@ -100,8 +100,15 @@ def test_reset_markers():
     # (it also doesn't *do* anything...)
     image.reset_markers()
     assert image.get_markers() is None
-
-    # TODO add test of actually removing markers...
+    table = Table(data=np.random.randint(0, 100, [5, 2]),
+                  names=['x', 'y'], dtype=('int', 'int'))
+    image.add_markers(table, x_colname='x', y_colname='y',
+                      skycoord_colname='coord', marker_name='test')
+    image.add_markers(table, x_colname='x', y_colname='y',
+                      skycoord_colname='coord', marker_name='test2')
+    image.reset_markers()
+    assert image.get_markers(marker_name='test') is None
+    assert image.get_markers(marker_name='test2') is None
 
 
 def test_remove_markers():
