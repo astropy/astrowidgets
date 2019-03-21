@@ -237,6 +237,24 @@ class ImageWidget(ipyw.VBox):
 #         from IPython.display import display
 #         return display(self._widget)
 
+    def load_file(self, filename, **kwargs):
+        """
+        Load a given file into the viewer. This relies on the viewer
+        to identify the best file handler to use.
+
+        Parameters
+        ----------
+        filename : str
+            File name.
+
+        kwargs : dict
+            Extra keywords to be passed into the viewer's file handler.
+
+        """
+        image = AstroImage(logger=self.logger)
+        image.load_file(filename, **kwargs)
+        self._viewer.set_image(image)
+
     def load_fits(self, fitsorfn, numhdu=None, memmap=None):
         """
         Load a FITS file into the viewer.
