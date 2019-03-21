@@ -2,54 +2,29 @@
 from __future__ import print_function, unicode_literals
 
 # STDLIB
-import sys
-import os
-import random
-import functools
-import warnings
 import logging
-from traitlets import Unicode, validate
 
 # THIRD-PARTY
-import numpy as np
-import astropy
-from astropy.coordinates import SkyCoord
+# import numpy as np
 from astropy.io import fits
-from astropy.table import Table, vstack
 import astropy.visualization as aviz
 from astropy.nddata import NDData
 from astropy.nddata.utils import block_reduce
 from astropy.wcs import WCS
+import tkinter as Tk
 
 # Jupyter widgets
 import ipywidgets as widgets
-from ipywidgets import interact, interactive, fixed, interact_manual
-
-# IPython
-from IPython.display import display
 
 # Matplotlib
-import matplotlib
-# Make sure that we are usign TkAgg
-matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
-from matplotlib.figure import Figure
-import matplotlib.widgets as matwidgets 
 from matplotlib.backends.backend_tkagg import (FigureCanvasTkAgg, NavigationToolbar2Tk)
-# implement the default mpl key bindings
-from matplotlib.backend_bases import key_press_handler
-from matplotlib.backend_tools import SetCursorBase, ToolPan
+import matplotlib
+matplotlib.use('TkAgg')  # Make sure that we are using TkAgg
+
 
 __all__ = ['MatImageWidget']
 
-
-# Allowed locations for cursor display
-ALLOWED_CURSOR_LOCATIONS = ['top', 'bottom', None]
-
-# List of marker names that are for internal use only
-RESERVED_MARKER_SET_NAMES = ['all']
-
-import tkinter as Tk
 
 class MatImageWidget(widgets.DOMWidget):
     """
@@ -62,13 +37,13 @@ class MatImageWidget(widgets.DOMWidget):
     Please fill in the blanks...
 
     """
-    #constructor
-    def __init__(self, width =8, height = 6, pixel_coords_offstet=0, *args, **kwargs):
+    # Constructor
+    def __init__(self, width=8, height=6, pixel_coords_offstet=0, *args, **kwargs):
         super().__init__()
-        
-        _view_name = Unicode('astrowidgets').tag(sync=True)
-        _view_module = Unicode('Matplotlib').tag(sync=True)
-        _view_module_version = Unicode('0.1.0').tag(sync=True)
+        #
+        # _view_name = Unicode('astrowidgets').tag(sync=True)
+        # _view_module = Unicode('MatImageWidget').tag(sync=True)
+        # _view_module_version = Unicode('0.1.0').tag(sync=True)
 
         self._jup_img = widgets.Image(format='png')
 
@@ -83,10 +58,10 @@ class MatImageWidget(widgets.DOMWidget):
         self._jup_img.height = '100%'
 
         # Set the width of the box containing the image to the desired width
-        #self.layout.width = str(image_width)
+        # self.layout.width = str(image_width)
 
         # Marker
-        self.marker = {'alpha':'0.25', 'marker': 'o', 'color': 'blue', 's': 20}
+        self.marker = {'alpha': '0.25', 'marker': 'o', 'color': 'blue', 's': 20}
 
         # Maintain marker tags as a set because we do not want
         # duplicate names.
@@ -98,14 +73,13 @@ class MatImageWidget(widgets.DOMWidget):
         # coordinates display
         self._jup_coord = widgets.HTML('Coordinates show up here')
         # This needs ipyevents 0.3.1 to work
-        #self.draw_cursor(event) = canvas.draw_cursor(self, event)
+        # self.draw_cursor(event) = canvas.draw_cursor(self, event)
 
         # Define a callback that shows the output of a print
         self._print_out = widgets.Output()
 
         self._cursor = 'bottom'
         self.children = [self._jup_img, self._jup_coord]
-
 
         # set DEBUG for everything
         logging.basicConfig(level=logging.DEBUG)
@@ -114,14 +88,13 @@ class MatImageWidget(widgets.DOMWidget):
         # set WARNING for Matplotlib
         logger.setLevel(logging.WARNING)
 
-
 #    def _repr_html_(self):
 #        """
 #        Show widget in Jupyter notebook.
 #        """
 #        from IPython.display import display
 #        return display(self._widget)
-
+#
     def load_fits(self, fitsorfn, numhdu, memmap=None):
         """
         Loads a FITS file into the viewer.
@@ -138,7 +111,7 @@ class MatImageWidget(widgets.DOMWidget):
             Extension number of the desired HDU.
             If ``None``, it is determined automatically.
 
-        memmap : bool or ``None``
+       memmap : bool or ``None``
             Memory mapping.
             If ``None``, it is determined automatically.
 
@@ -152,9 +125,11 @@ class MatImageWidget(widgets.DOMWidget):
             hdu = fits.open(fitsorfn)
             image = hdu[0].data
             hdr = hdu[0].header
+        else:
+            raise TypeError("The file type is not of FITS format.")
         return image, hdr
 
-    def load_nddata(self, ndd):  # Wondering how come I cannot put a ``self`` in here before ``ndd``? 
+    def load_nddata(self, ndd):
         """
         Load an ``NDData`` object into the viewer.
 
@@ -166,31 +141,24 @@ class MatImageWidget(widgets.DOMWidget):
         """
         if isinstance(ndd, NDData):
             image = ndd.data
-            if ndd.wcs:    
+            if ndd.wcs:
                 wcs = ndd.wcs
                 hdr = wcs.to_header()
                 return image, hdr
-            else: 
+            else:
                 raise ValueError("No basic FITS header info provided.")
-        
-    #def load_array(self, arr):
-        """
-        Load a 2D array into the viewer.
-        .. note:: Use :meth:`load_nddata` for WCS support.
-        Parameters
-        ----------
-        arr : array-like
-            2D array.
-        """
-        #if isinstance(arr, (list, tuple)):
-        #    image = np.array(arr)
-        #elif isinstance(arr, np.ndarray):
-        #    image = arr
-        #hdr = None
-        #return image
 
-
-#    # Will need to tweak this a bit to make it work in this context.
+#    def load_array(self, arr):
+#        """
+#        Load a 2D array into the viewer.
+#        .. note:: Use :meth:`load_nddata` for WCS support.
+#        Parameters
+#        ----------
+#        arr : array-like
+#            2D array.
+#        """
+#
+#    #Will need to tweak this a bit to make it work in this context.
 #    def plot_click(self, image):
 #        """Plot dummy data and handle user clicks."""
 #
@@ -210,18 +178,17 @@ class MatImageWidget(widgets.DOMWidget):
 #
 #        # Register click events
 #        plt.connect('button_press_event', _on_click)
-
-
+#
     def show_image(self, image, hdr, percl=99, percu=None, figsize=(8, 6),
-               cmap='viridis', log=True,
-               show_colorbar=True, show_ticks=True,
-               fig=None, ax=None, input_ratio=None):
+                   cmap='viridis', log=True,
+                   show_colorbar=True, show_ticks=True,
+                   fig=None, ax=None, input_ratio=None):
         """
         Show an image in matplotlib with some basic astronomically-appropriate stretching.
-  
+
         """
-        #root = Tk.Tk()
-        #root.wm_title("Embedding in TK")
+        root = Tk.Tk()
+        root.wm_title("Embedding in TK")
 
         wcs = WCS(hdr)
 
@@ -233,14 +200,13 @@ class MatImageWidget(widgets.DOMWidget):
             raise ValueError('Must provide both "fig" and "ax" '
                              'if you provide one of them')
         elif fig is None and ax is None:
-            # fig, ax = plt.subplots(1, 1, figsize=figsize)
             fig = plt.figure(figsize=figsize)
             ax = plt.subplot(projection=wcs)
             if figsize is not None:
                 # Rescale the fig size to match the image dimensions, roughly
                 image_aspect_ratio = image.shape[0] / image.shape[1]
                 figsize = (max(figsize) * image_aspect_ratio, max(figsize))
-                #print(figsize)
+                # print(figsize)
 
         # To preserve details we should *really* downsample correctly and
         # not rely on matplotlib to do it correctly for us (it won't).
@@ -270,18 +236,17 @@ class MatImageWidget(widgets.DOMWidget):
         else:
             stretch = aviz.LinearStretch()
 
-        norm = aviz.ImageNormalize(reduced_data, interval=aviz.AsymmetricPercentileInterval(percl, percu),
-                                      stretch=stretch)
-        
+        norm = aviz.ImageNormalize(reduced_data, interval=aviz.AsymmetricPercentileInterval(percl, percu), stretch=stretch)
+
         # The following line makes it so that the zoom level no longer changes,
         # otherwise Matplotlib has a tendency to zoom out when adding overlays.
         # ax.set_autoscale_on(False)
 
         # Can also try to make the colorbar the same height as the image by setting
-        # aspect='auto'. 
+        # aspect='auto'.
         im = ax.imshow(reduced_data, norm=norm, origin='lower',
                        cmap=cmap, extent=extent, aspect='equal')
-        
+
         plt.xlabel(r'$RA$')
         plt.ylabel(r'$Dec$')
 
@@ -290,28 +255,24 @@ class MatImageWidget(widgets.DOMWidget):
             # the colorbar the same height as the image, but they do....unless the image
             # is wider than it is tall. Sticking with this for now anyway...
             # Thanks: https://stackoverflow.com/a/26720422/3486425
-            #fig.colorbar(im, ax=ax, fraction=0.046, pad=0.04)
+            # fig.colorbar(im, ax=ax, fraction=0.046, pad=0.04)
 
-            # I have eliminated the need for using the ``fraction`` and ``pad`` attributes of 
-            # the colorbar by simply adding the ``aspect`` attribute to imshow() instead. 
+            # I have eliminated the need for using the ``fraction`` and ``pad`` attributes of
+            # the colorbar by simply adding the ``aspect`` attribute to imshow() instead.
             fig.colorbar(im, ax=ax)
 
         # The plot now shows ticks at the bottom and left sides, while the colorbar occupies a
-        # position on the right-hand side of the diagram. 
+        # position on the right-hand side of the diagram.
         if not show_ticks:
             ax.tick_params(labelbottom=False, labelleft=False)
 
-
         # GUI
-        root = Tk.Tk()
+        # root = Tk.Tk()
         root.wm_title("Embedding in Tk")
 
-        # a tk.DrawingAreaanvas = FigureCanvasT
         canvas = FigureCanvasTkAgg(fig, master=root)  # A Tk.DrawingArea
         canvas.draw()
-        #canvas.get_tk_widget().grid(row=0, column=1)
         canvas.get_tk_widget().pack(side=Tk.TOP, fill=Tk.BOTH, expand=1)
-        #_canvas._tkcanvas.pack(side=Tk.TOP, fill=Tk.BOTH, expand=1)
         toolbar = NavigationToolbar2Tk(canvas, root)
         toolbar.update()
-        canvas.get_tk_widget().pack(side=Tk.TOP, fill=Tk.BOTH, expand=1)
+        canvas._tkcanvas.pack(side=Tk.TOP, fill=Tk.BOTH, expand=1)
