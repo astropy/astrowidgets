@@ -94,6 +94,14 @@ def test_add_markers():
                       skycoord_colname='coord')
 
 
+def test_set_markers():
+    image = ImageWidget()
+    image.marker = {'color': 'yellow', 'radius': 10, 'type': 'cross'}
+    assert 'cross' in str(image.marker)
+    assert 'yellow' in str(image.marker)
+    assert '10' in str(image.marker)
+
+
 def test_reset_markers():
     image = ImageWidget()
     # First test: this shouldn't raise any errors
