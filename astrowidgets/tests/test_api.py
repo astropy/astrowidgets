@@ -1,5 +1,3 @@
-
-
 import numpy as np
 
 import pytest
@@ -13,11 +11,16 @@ from ginga.ColorDist import ColorDistBase
 from ..core import ImageWidget, ALLOWED_CURSOR_LOCATIONS
 
 
-def test_load_fits():
+def test_load_fits(tmpdir):
     image = ImageWidget()
     data = np.random.random([100, 100])
     hdu = fits.PrimaryHDU(data=data)
     image.load_fits(hdu)
+
+    # Load it as a file
+    filename = str(tmpdir.join('randomimage.fits'))
+    hdu.writeto(filename, overwrite=True)
+    image.load_file(filename)
 
 
 def test_load_nddata():
