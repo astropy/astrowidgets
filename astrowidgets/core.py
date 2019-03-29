@@ -251,8 +251,11 @@ class ImageWidget(ipyw.VBox):
             Extra keywords to be passed into the viewer's file handler.
 
         """
-        image = AstroImage(logger=self.logger)
-        image.load_file(filename, **kwargs)
+        from ginga.util import loader
+
+        image = loader.load_data(filename, logger=self.logger, **kwargs)
+        if not isinstance(image, AstroImage):
+            raise ValueError("Default index in '{}' does not reference an image".format(filename))
         self._viewer.set_image(image)
 
     def load_fits(self, fitsorfn, numhdu=None, memmap=None):
