@@ -835,9 +835,11 @@ class ImageWidget(ipyw.VBox):
         """
         raise NotImplementedError
 
-    # https://github.com/ejeschke/ginga/pull/665
     def save(self, filename):
         """
         Save out the current image view to given PNG filename.
         """
-        self._viewer.save_rgb_image_as_file(filename)
+        # It turns out the image value is already in PNG format so we just
+        # to write that out to a file.
+        with open(filename, 'wb') as f:
+            f.write(self._jup_img.value)
