@@ -112,6 +112,12 @@ class ImageWidget(ipyw.VBox):
         self.canvas.enable_draw(True)
         self.canvas.enable_edit(True)
 
+        bind_map = self._viewer.get_bindmap()
+        # Set up right-click and drag adjusts the contrast
+        bind_map.map_event(None, (), 'ms_right', 'contrast')
+        # Shift-right-click restores the default contrast
+        bind_map.map_event(None, ('shift',), 'ms_right', 'contrast_restore')
+
         # Marker
         self.marker = {'type': 'circle', 'color': 'cyan', 'radius': 20}
         # Maintain marker tags as a set because we do not want
