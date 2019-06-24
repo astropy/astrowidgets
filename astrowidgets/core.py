@@ -597,6 +597,8 @@ class ImageWidget(ipyw.VBox):
         else:
             markers_table = Table(xy_col, names=(x_colname, y_colname))
 
+        # Either way, add the marker names
+        markers_table['marker name'] = marker_name
         return markers_table
 
     def add_markers(self, table, x_colname='x', y_colname='y',
