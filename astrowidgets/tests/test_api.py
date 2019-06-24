@@ -84,6 +84,43 @@ def test_stop_marking():
 def test_is_marking():
     image = ImageWidget()
     assert image.is_marking in [True, False]
+    with pytest.raises(AttributeError):
+        image.is_marking = True
+
+
+def test_start_marking():
+    image = ImageWidget()
+
+    # Setting these to check that start_marking affects them.
+    image.click_center = True
+    assert image.click_center
+    image.scroll_pan = False
+    assert not image.scroll_pan
+
+    marker_style = {'color': 'yellow', 'radius': 10, 'type': 'cross'}
+    image.start_marking(marker_name='something',
+                        marker=marker_style)
+    assert image.is_marking
+    assert image.marker == marker_style
+    assert not image.click_center
+    assert not image.click_drag
+
+    # scroll_pan better activate when marking otherwise there is
+    # no way to pan while interactively marking
+    assert image.scroll_pan
+
+    # Make sure that when we stop_marking we get our old
+    # controls back.
+    image.stop_marking()
+    assert image.click_center
+    assert not image.scroll_pan
+
+    # Make sure that click_drag is restored as expected
+    image.click_drag = True
+    image.start_marking()
+    assert not image.click_drag
+    image.stop_marking()
+    assert image.click_drag
 
 
 def test_add_markers():
@@ -181,19 +218,58 @@ def test_cursor():
 
 def test_click_drag():
     image = ImageWidget()
-    with pytest.raises(NotImplementedError):
-        image.click_drag()
+    # Set this to ensure that click_drag turns it off
+    image._click_center = True
+
+    # Make sure that setting click_drag to False does not turn off
+    # click_center.
+
+    image.click_drag = False
+    assert image.click_center
+
+    image.click_drag = True
+
+    assert not image.click_center
+
+    # If is_marking is true then trying to click_drag
+    # should fail.
+    image._is_marking = True
+    with pytest.raises(ValueError) as e:
+        image.click_drag = True
+    assert 'Interactive marking' in str(e)
 
 
 def test_click_center():
     image = ImageWidget()
     assert (image.click_center is True) or (image.click_center is False)
 
+    # Set click_drag True and check that click_center affects it appropriately
+    image.click_drag = True
+
+    image.click_center = False
+    assert image.click_drag
+
+    image.click_center = True
+    assert not image.click_drag
+
+    image.start_marking()
+    # If marking is in progress then setting click center should fail
+    with pytest.raises(ValueError) as e:
+        image.click_center = True
+
+    assert 'Cannot set' in str(e)
+
+    # setting to False is fine though so no error is expected here
+    image.click_center = False
+
 
 def test_scroll_pan():
     image = ImageWidget()
-    with pytest.raises(NotImplementedError):
-        image.scroll_pan()
+
+    # Make sure scroll_pan is actually settable
+    for val in [True, False]:
+        image.scroll_pan = val
+        assert image.scroll_pan is val
 
 
 def test_save():

@@ -154,7 +154,7 @@ def test_can_add_markers_with_names():
     # name has been added.
     data_x = 50
     data_y = 50
-    image.is_marking = True
+    image._is_marking = True
     image._mouse_click_cb(image._viewer, None, data_x, data_y)
     assert image._interactive_marker_set_name in image._marktags
 
@@ -188,7 +188,7 @@ def test_get_marker_with_names():
     image.add_markers(input_markers)
 
     # Add pseudo-interactive points
-    image.is_marking = True
+    image._is_marking = True
     for data_x, data_y in input_markers:
         image._mouse_click_cb(image._viewer, None, data_x, data_y)
 

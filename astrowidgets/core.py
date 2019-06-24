@@ -72,8 +72,6 @@ class ImageWidget(ipyw.VBox):
                 warnings.warn('install opencv or set use_opencv=False')
 
         self._viewer = EnhancedCanvasView(logger=logger)
-        self._is_marking = False
-        self._click_center = False
 
         self._pixel_offset = pixel_coords_offset
 
@@ -111,6 +109,24 @@ class ImageWidget(ipyw.VBox):
         self.canvas = self.dc.DrawingCanvas()
         self.canvas.enable_draw(True)
         self.canvas.enable_edit(True)
+
+        # Make sure all of the internal state trackers have a value
+        # and start in a state which is definitely allowed: all are
+        # False.
+        self._is_marking = False
+        self._click_center = False
+        self._click_drag = False
+        self._scroll_pan = False
+
+        # Set a couple of things to match the ginga defaults
+        self.scroll_pan = True
+        self.click_drag = False
+
+        bind_map = self._viewer.get_bindmap()
+        # Set up right-click and drag adjusts the contrast
+        bind_map.map_event(None, (), 'ms_right', 'contrast')
+        # Shift-right-click restores the default contrast
+        bind_map.map_event(None, ('shift',), 'ms_right', 'contrast_restore')
 
         # Marker
         self.marker = {'type': 'circle', 'color': 'cyan', 'radius': 20}
@@ -215,7 +231,7 @@ class ImageWidget(ipyw.VBox):
 
             # NOTE: By always using CompoundObject, marker handling logic
             # is simplified.
-            obj = self.marker(x=data_x, y=data_y)
+            obj = self._marker(x=data_x, y=data_y)
             objs.append(obj)
             viewer.canvas.add(self.dc.CompoundObject(*objs),
                               tag=marker_name)
@@ -360,7 +376,10 @@ class ImageWidget(ipyw.VBox):
 
     @zoom_level.setter
     def zoom_level(self, val):
-        self._viewer.scale_to(val, val)
+        if val == 'fit':
+            self._viewer.zoom_fit()
+        else:
+            self._viewer.scale_to(val, val)
 
     def zoom(self, val):
         """
@@ -384,28 +403,42 @@ class ImageWidget(ipyw.VBox):
         """
         return self._is_marking
 
-    @is_marking.setter
-    def is_marking(self, val):
-        if not isinstance(val, bool):
-            raise ValueError('Must be True or False')
-        elif self.click_center and val:
-            raise ValueError('Cannot set to True while in click-center mode')
-        self._is_marking = val
+    def start_marking(self, marker_name=None,
+                      marker=None):
+        """
+        Start marking, with option to name this set of markers or
+        to specify the marker style.
+        """
+        self._cached_state = dict(click_center=self.click_center,
+                                  click_drag=self.click_drag,
+                                  scroll_pan=self.scroll_pan)
+        self.click_center = False
+        self.click_drag = False
+        # Set scroll_pan to ensure there is a mouse way to pan
+        self.scroll_pan = True
+        self._is_marking = True
+        if marker is not None:
+            self.marker = marker
 
-    def stop_marking(self, clear_markers=True):
+    def stop_marking(self, clear_markers=False):
         """
         Stop marking mode, with option to clear markers, if desired.
 
         Parameters
         ----------
-        clear_markers : bool
+        clear_markers : bool, optional
             If ``clear_markers`` is `False`, existing markers are
             retained until :meth:`reset_markers` is called.
             Otherwise, they are erased.
         """
-        self.is_marking = False
-        if clear_markers:
-            self.reset_markers()
+        if self.is_marking:
+            self._is_marking = False
+            self.click_center = self._cached_state['click_center']
+            self.click_drag = self._cached_state['click_drag']
+            self.scroll_pan = self._cached_state['scroll_pan']
+            self._cached_state = {}
+            if clear_markers:
+                self.reset_markers()
 
     @property
     def marker(self):
@@ -421,24 +454,33 @@ class ImageWidget(ipyw.VBox):
             {'type': 'plus', 'color': 'red', 'radius': 20}
 
         """
-        return self._marker
+        # Change the marker from a very ginga-specific type (a partial
+        # of a ginga drawing canvas type) to a generic dict, which is
+        # what we expect the user to provide.
+        #
+        # That makes things like self.marker = self.marker work.
+        return self._marker_dict
 
     @marker.setter
     def marker(self, val):
-        marker_type = val.pop('type')
+        # Make a new copy to avoid modifying the dict that the user passed in.
+        _marker = val.copy()
+        marker_type = _marker.pop('type')
         if marker_type == 'circle':
-            self._marker = functools.partial(self.dc.Circle, **val)
+            self._marker = functools.partial(self.dc.Circle, **_marker)
         elif marker_type == 'plus':
-            val['type'] = 'point'
-            val['style'] = 'plus'
-            self._marker = functools.partial(self.dc.Point, **val)
+            _marker['type'] = 'point'
+            _marker['style'] = 'plus'
+            self._marker = functools.partial(self.dc.Point, **_marker)
         elif marker_type == 'cross':
-            val['type'] = 'point'
-            val['style'] = 'cross'
-            self._marker = functools.partial(self.dc.Point, **val)
+            _marker['type'] = 'point'
+            _marker['style'] = 'cross'
+            self._marker = functools.partial(self.dc.Point, **_marker)
         else:  # TODO: Implement more shapes
             raise NotImplementedError(
                 'Marker type "{}" not supported'.format(marker_type))
+        # Only set this once we have successfully created a marker
+        self._marker_dict = val
 
     def get_markers(self, x_colname='x', y_colname='y',
                     skycoord_colname='coord',
@@ -645,7 +687,7 @@ class ImageWidget(ipyw.VBox):
             self._viewer.canvas.delete_object_by_tag(marker_name)
 
         # TODO: Test to see if we can mix WCS and data on the same canvas
-        objs += [self.marker(x=x, y=y, coord=coord_type)
+        objs += [self._marker(x=x, y=y, coord=coord_type)
                  for x, y in zip(coord_x, coord_y)]
         self._viewer.canvas.add(self.dc.CompoundObject(*objs),
                                 tag=marker_name)
@@ -811,6 +853,10 @@ class ImageWidget(ipyw.VBox):
             raise ValueError('Must be True or False')
         elif self.is_marking and val:
             raise ValueError('Cannot set to True while in marking mode')
+
+        if val:
+            self.click_drag = False
+
         self._click_center = val
 
     # TODO: Awaiting https://github.com/ejeschke/ginga/issues/674
@@ -824,7 +870,24 @@ class ImageWidget(ipyw.VBox):
         Note that this should be automatically made `False` when selection mode
         is activated.
         """
-        raise NotImplementedError
+        return self._click_drag
+
+    @click_drag.setter
+    def click_drag(self, value):
+        if not isinstance(value, bool):
+            raise ValueError('click_drag must be either True or False')
+        if self.is_marking:
+            raise ValueError('Interactive marking is in progress. Call '
+                             'stop_marking() to end marking before setting '
+                             'click_drag')
+        self._click_drag = value
+        bindmap = self._viewer.get_bindmap()
+        if value:
+            # Only turn off click_center if click_drag is being set to True
+            self.click_center = False
+            bindmap.map_event(None, (), 'ms_left', 'pan')
+        else:
+            bindmap.map_event(None, (), 'ms_left', 'cursor')
 
     @property
     def scroll_pan(self):
@@ -833,7 +896,19 @@ class ImageWidget(ipyw.VBox):
         If True, scrolling moves around in the image.  If False, scrolling
         (up/down) *zooms* the image in and out.
         """
-        raise NotImplementedError
+        return self._scroll_pan
+
+    @scroll_pan.setter
+    def scroll_pan(self, value):
+        if not isinstance(value, bool):
+            raise ValueError('scroll_pan must be either True or False')
+
+        bindmap = self._viewer.get_bindmap()
+        self._scroll_pan = value
+        if value:
+            bindmap.map_event(None, (), 'pa_pan', 'pan')
+        else:
+            bindmap.map_event(None, (), 'pa_pan', 'zoom')
 
     def save(self, filename):
         """
