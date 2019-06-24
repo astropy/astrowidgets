@@ -403,14 +403,6 @@ class ImageWidget(ipyw.VBox):
         """
         return self._is_marking
 
-    # @is_marking.setter
-    # def is_marking(self, val):
-    #     if not isinstance(val, bool):
-    #         raise ValueError('Must be True or False')
-    #     elif self.click_center and val:
-    #         raise ValueError('Cannot set to True while in click-center mode')
-    #     self._is_marking = val
-
     def start_marking(self, marker_name=None,
                       marker=None):
         """
