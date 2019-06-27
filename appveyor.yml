@@ -14,8 +14,8 @@ environment:
 
       # List other runtime dependencies for the package that are available as
       # conda packages here.
-      CONDA_DEPENDENCIES: "ginga ipyevents pillow"
-
+      CONDA_DEPENDENCIES: "ipyevents pillow"
+      PIP_DEPENDENCIES: "ginga"
 
       # Conda packages for affiliated packages are hosted in channel
       # "astropy" while builds for astropy LTS with recent numpy versions
@@ -26,9 +26,9 @@ environment:
 
   matrix:
 
-      # We test 3.6
+      # We test 3.7
 
-      - PYTHON_VERSION: "3.6"
+      - PYTHON_VERSION: "3.7"
         ASTROPY_VERSION: "stable"
         NUMPY_VERSION: "stable"
 
