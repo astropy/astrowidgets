@@ -1,5 +1,3 @@
-
-
 import numpy as np
 
 import pytest
@@ -162,14 +160,14 @@ def test_remove_markers():
     image._marktags.add(image._default_mark_tag_name)
     with pytest.raises(ValueError) as e:
         image.remove_markers('arf')
-    assert 'arf' in str(e)
+    assert 'arf' in str(e.value)
 
 
 def test_stretch():
     image = ImageWidget()
     with pytest.raises(ValueError) as e:
         image.stretch = 'not a valid value'
-    assert 'must be one of' in str(e)
+    assert 'must be one of' in str(e.value)
 
     image.stretch = 'log'
     assert isinstance(image.stretch, (ColorDistBase))
@@ -181,13 +179,13 @@ def test_cuts():
     # An invalid string should raise an error
     with pytest.raises(ValueError) as e:
         image.cuts = 'not a valid value'
-    assert 'must be one of' in str(e)
+    assert 'must be one of' in str(e.value)
 
     # Setting cuts to something with incorrect length
     # should raise an error.
     with pytest.raises(ValueError) as e:
         image.cuts = (1, 10, 100)
-    assert 'length 2' in str(e)
+    assert 'length 2' in str(e.value)
 
     # These ought to succeed
 
@@ -236,7 +234,7 @@ def test_click_drag():
     image._is_marking = True
     with pytest.raises(ValueError) as e:
         image.click_drag = True
-    assert 'Interactive marking' in str(e)
+    assert 'Interactive marking' in str(e.value)
 
 
 def test_click_center():
@@ -256,8 +254,7 @@ def test_click_center():
     # If marking is in progress then setting click center should fail
     with pytest.raises(ValueError) as e:
         image.click_center = True
-
-    assert 'Cannot set' in str(e)
+    assert 'Cannot set' in str(e.value)
 
     # setting to False is fine though so no error is expected here
     image.click_center = False
