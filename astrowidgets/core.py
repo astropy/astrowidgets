@@ -135,7 +135,8 @@ class ImageWidget(ipyw.VBox):
         self._marktags = set()
         # Let's have a default name for the tag too:
         self._default_mark_tag_name = 'default-marker-name'
-        self._interactive_marker_set_name = 'interactive-markers'
+        self._interactive_marker_set_name_default = 'interactive-markers'
+        self._interactive_marker_set_name = self._interactive_marker_set_name_default
 
         # coordinates display
         self._jup_coord = ipyw.HTML('Coordinates show up here')
@@ -417,6 +418,13 @@ class ImageWidget(ipyw.VBox):
         # Set scroll_pan to ensure there is a mouse way to pan
         self.scroll_pan = True
         self._is_marking = True
+        if marker_name is not None:
+            self._validate_marker_name(marker_name)
+            self._interactive_marker_set_name = marker_name
+            self._marktags.add(marker_name)
+        else:
+            self._interactive_marker_set_name = \
+                self._interactive_marker_set_name_default
         if marker is not None:
             self.marker = marker
 
@@ -597,7 +605,19 @@ class ImageWidget(ipyw.VBox):
         else:
             markers_table = Table(xy_col, names=(x_colname, y_colname))
 
+        # Either way, add the marker names
+        markers_table['marker name'] = marker_name
         return markers_table
+
+    def _validate_marker_name(self, marker_name):
+        """
+        Raise an error if the marker_name is not allowed.
+        """
+        if marker_name in RESERVED_MARKER_SET_NAMES:
+            raise ValueError('The marker name {} is not allowed. Any name is '
+                             'allowed except these: '
+                             '{}'.format(marker_name,
+                                         ', '.join(RESERVED_MARKER_SET_NAMES)))
 
     def add_markers(self, table, x_colname='x', y_colname='y',
                     skycoord_colname='coord', use_skycoord=False,
@@ -640,11 +660,7 @@ class ImageWidget(ipyw.VBox):
         if marker_name is None:
             marker_name = self._default_mark_tag_name
 
-        if marker_name in RESERVED_MARKER_SET_NAMES:
-            raise ValueError('The marker name {} is not allowed. Any name is '
-                             'allowed except these: '
-                             '{}'.format(marker_name,
-                                         ', '.join(RESERVED_MARKER_SET_NAMES)))
+        self._validate_marker_name(marker_name)
 
         self._marktags.add(marker_name)
 
