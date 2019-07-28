@@ -12,7 +12,7 @@ conf = ConfigParser()
 conf.read(['setup.cfg'])
 metadata = dict(conf.items('metadata'))
 
-PACKAGENAME = metadata.get('package_name', 'astrowidgets')
+PACKAGENAME = metadata.get('name', 'astrowidgets')
 DESCRIPTION = metadata.get('description', 'Widgets for the Jupyter notebook and JupyterLab')
 AUTHOR = metadata.get('author', 'Astropy Developers')
 AUTHOR_EMAIL = metadata.get('author_email', '')
@@ -34,11 +34,9 @@ from setuptools import setup
 import builtins
 builtins._ASTROPY_SETUP_ = True
 
-from astropy_helpers.setup_helpers import (register_commands, get_debug_option,
-                                           get_package_info)
+from astropy_helpers.setup_helpers import register_commands, get_package_info
 from astropy_helpers.git_helpers import get_git_devstr
 from astropy_helpers.version_helpers import generate_version_py
-
 
 # order of priority for long_description:
 #   (1) set in setup.cfg,
@@ -80,11 +78,10 @@ if not RELEASE:
 # Populate the dict of setup command overrides; this should be done before
 # invoking any other functionality from distutils since it can potentially
 # modify distutils' behavior.
-cmdclassd = register_commands(PACKAGENAME, VERSION, RELEASE)
+cmdclassd = register_commands()
 
 # Freeze build information in version.py
-generate_version_py(PACKAGENAME, VERSION, RELEASE,
-                    get_debug_option(PACKAGENAME))
+version = generate_version_py()
 
 # Treat everything in scripts except README* as a script to be installed
 scripts = [fname for fname in glob.glob(os.path.join('scripts', '*'))
