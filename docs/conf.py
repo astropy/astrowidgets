@@ -108,8 +108,8 @@ release = package.__version__
 
 
 html_theme_options = {
-    'logotext1': 'astrowidgets',  # white,  semi-bold
-    'logotext2': '',  # orange, light
+    'logotext1': 'astro',  # white,  semi-bold
+    'logotext2': 'widgets',  # orange, light
     'logotext3': ':docs'   # white,  light
     }
 
