@@ -99,6 +99,11 @@ matrix:
         - stage: Comprehensive tests
           env: NUMPY_VERSION=1.14
 
+        - stage: Comprehensive tests
+          os: windows
+          env: SETUP_CMD='test'
+               PYTHON_VERSION=3.7
+
         # Do a PEP8 test with flake8
         - stage: Comprehensive tests
           env: MAIN_CMD='flake8 astrowidgets --count' SETUP_CMD=''
