@@ -69,8 +69,6 @@ matrix:
 
     include:
         - stage: Initial tests
-          env: PYTHON_VERSION=3.5 SETUP_CMD='egg_info'
-        - stage: Initial tests
           env: PYTHON_VERSION=3.6 SETUP_CMD='egg_info'
         - stage: Initial tests
           env: PYTHON_VERSION=3.7 SETUP_CMD='egg_info'
@@ -99,9 +97,12 @@ matrix:
         # time.
 
         - stage: Comprehensive tests
-          env: PYTHON_VERSION=3.5 NUMPY_VERSION=1.13
-        - stage: Comprehensive tests
           env: NUMPY_VERSION=1.14
+
+        - stage: Comprehensive tests
+          os: windows
+          env: SETUP_CMD='test'
+               PYTHON_VERSION=3.7
 
         # Do a PEP8 test with flake8
         - stage: Comprehensive tests
