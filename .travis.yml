@@ -69,8 +69,6 @@ matrix:
 
     include:
         - stage: Initial tests
-          env: PYTHON_VERSION=3.5 SETUP_CMD='egg_info'
-        - stage: Initial tests
           env: PYTHON_VERSION=3.6 SETUP_CMD='egg_info'
         - stage: Initial tests
           env: PYTHON_VERSION=3.7 SETUP_CMD='egg_info'
@@ -98,8 +96,6 @@ matrix:
         # versions of Python, we can vary Python and Numpy versions at the same
         # time.
 
-        - stage: Comprehensive tests
-          env: PYTHON_VERSION=3.5 NUMPY_VERSION=1.13
         - stage: Comprehensive tests
           env: NUMPY_VERSION=1.14
 
