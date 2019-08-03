@@ -9,10 +9,6 @@ Widgets for the Jupyter notebook and JupyterLab
     :target: https://travis-ci.org/astropy/astrowidgets
     :alt: Travis CI Status
 
-.. image:: https://ci.appveyor.com/api/projects/status/ihh4sxuhv743r20t/branch/master?svg=true
-    :target: https://ci.appveyor.com/project/Astropy/astrowidgets/branch/master
-    :alt: Appveyor CI Status
-
 .. image:: https://readthedocs.org/projects/astrowidgets/badge/?version=latest
     :target: https://astrowidgets.readthedocs.io/en/latest/?badge=latest
     :alt: Documentation Status
