@@ -61,7 +61,7 @@ should be sufficient unless stated otherwise.
 Using OpenCV
 ------------
 
-If you wish to use [OpenCV](https://docs.opencv.org/master/index.html) to handle the
+If you wish to use `OpenCV <https://docs.opencv.org/master/index.html>`_ to handle the
 drawing in ginga you have two options:
 
 Install OpenCV with pip
