@@ -85,7 +85,7 @@ This should work on conda::
 
 If, after installing opencv, you get a warning like this::
 
-    /Users/juan/anaconda3/lib/python3.7/site-packages/astrowidgets/core.py:72: UserWarning: install opencv or set use_opencv=False
+    astrowidgets/core.py:72: UserWarning: install opencv or set use_opencv=False
     warnings.warn('install opencv or set use_opencv=False')
 
 then you should try installing a newer version of freetype::
