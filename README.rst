@@ -13,7 +13,8 @@ Widgets for the Jupyter notebook and JupyterLab
     :target: https://astrowidgets.readthedocs.io/en/latest/?badge=latest
     :alt: Documentation Status
 
-``astrowidgets`` aims to be a set of astronomy widgets for Jupyter Lab or Notebook, leveraging the Astropy ecosystem. The `ImageWidget` implements the API documented at
+``astrowidgets`` aims to be a set of astronomy widgets for Jupyter Lab or Notebook,
+leveraging the Astropy ecosystem. The ``ImageWidget`` implements the API documented at
 `https://github.com/eteq/nb-astroimage-api <https://github.com/eteq/nb-astroimage-api>`_
 
 **Warning**

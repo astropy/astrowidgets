@@ -31,18 +31,19 @@ conda installation::
 
     If you are using a virtual environment and
     are experiencing problems with the installation, be sure to check and use
-    the suitable pip version. Also, if you are having problem even with the following
+    the suitable ``pip`` version. Also, if you are having problem even with the following
     dependencies installed, please make sure you have the most up-to-date versions.
     Upgrade dependencies when and where necessary.
 
 The following dependencies are needed *in the kernel of execution*
-to use ``astrowidgets`` in either Jupyter Lab or Notebook. They should be installed automatically when you install astrowidgets:
+to use ``astrowidgets`` in either Jupyter Lab or Notebook. They should be installed
+automatically when you install astrowidgets:
 
-* ``python >= 3.6``
+* ``python>=3.6``
 * ``numpy``
 * ``astropy``
 * ``ipywidgets>=7.5``
-* ``ipyevents >= 0.6.3``
+* ``ipyevents>=0.6.3``
 * ``ginga>=2.7.1``
 * ``pillow``
 * ``freetype``
@@ -51,7 +52,7 @@ to use ``astrowidgets`` in either Jupyter Lab or Notebook. They should be instal
 * ``opencv`` (optional, not installed by default)
 * ``nodejs`` (only if you plan to use Jupyter Lab, not installed by default)
 
-After installing dependencies, run::
+After installing dependencies, for Jupyter Lab, run::
 
     jupyter labextension install @jupyter-widgets/jupyterlab-manager
 
@@ -62,13 +63,13 @@ Using OpenCV
 ------------
 
 If you wish to use `OpenCV <https://docs.opencv.org/master/index.html>`_ to handle the
-drawing in ginga you have two options:
+drawing in Ginga, you have two options:
 
 Install OpenCV with pip
 ^^^^^^^^^^^^^^^^^^^^^^^
 
 If you are using pip it looks like the best option is to use the
-`opencv-python` package, which provides pre-built binaries of most of OpenCV::
+``opencv-python`` package, which provides pre-built binaries of most of OpenCV::
 
     pip install opencv-python
 
@@ -83,19 +84,19 @@ This should work on conda::
 
     conda install -c conda-forge opencv
 
-If, after installing opencv, you get a warning like this::
+If, after installing ``opencv``, you get a warning like this::
 
     astrowidgets/core.py:72: UserWarning: install opencv or set use_opencv=False
     warnings.warn('install opencv or set use_opencv=False')
 
-then you should try installing a newer version of freetype::
+then you should try installing a newer version of ``freetype``::
 
     conda install 'freetype\>=2.10'
 
 For more details, see `this discussion of opencv and astrowidgets
 <https://github.com/astropy/astrowidgets/issues/90>`_.
 
-Widget with Ginga Toolkit
+Widget with Ginga toolkit
 -------------------------
 
 .. note::
@@ -105,7 +106,7 @@ Widget with Ginga Toolkit
     branch from source.
 
 
-Notes for Windows Users
+Notes for Windows users
 -----------------------
 
 aggdraw

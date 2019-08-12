@@ -9,7 +9,7 @@ or Notebook, leveraging the Astropy ecosystem.
 
     ``astrowidgets`` is currently in very early development.
     There may be significant changes in the API, though we will do
-    our best to follow semantic versioning
+    our best to follow semantic versioning.
 
     Please let us know what would make the tool easier to use on our
     `GitHub issue tracker`_.
