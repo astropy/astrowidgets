@@ -19,7 +19,8 @@ Loading an image
 ++++++++++++++++
 
 An empty viewer is not very useful, though, so load some data from a FITS
-file::
+file. The FITS file at the link below is an image of the field of the exoplanet
+Kelt-16, and also contains part of the Veil Nebula::
 
     >>> image.load_fits('https://zenodo.org/record/3356833/files/kelt-16-b-S001-R001-C084-r.fit.bz2?download=1')
 
