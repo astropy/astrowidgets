@@ -14,20 +14,13 @@ sudo: false
 #
 # https://github.com/travis-ci/apt-package-whitelist/blob/master/ubuntu-precise
 
-addons:
-    apt:
-        packages:
-            - graphviz
-            - texlive-latex-extra
-            - dvipng
-
 env:
     global:
 
         # The following versions are the 'default' for tests, unless
         # overridden underneath. They are defined here in order to save having
         # to repeat them for all configurations.
-        - PYTHON_VERSION=3.6
+        - PYTHON_VERSION=3.7
         - NUMPY_VERSION=stable
         - ASTROPY_VERSION=stable
         - GINGA_VERSION=stable
@@ -69,19 +62,11 @@ matrix:
 
     include:
         - stage: Initial tests
-          env: PYTHON_VERSION=3.6 SETUP_CMD='egg_info'
-        - stage: Initial tests
-          env: PYTHON_VERSION=3.7 SETUP_CMD='egg_info'
+          env: SETUP_CMD='egg_info'
 
         # Do a coverage test.
         - stage: Initial tests
           env: SETUP_CMD='test --coverage'
-
-        # Check for sphinx doc build warnings - we do this first because it
-        # may run for a long time
-        - stage: Comprehensive tests
-          env: SETUP_CMD='build_docs -w'
-               PIP_DEPENDENCIES='sphinx-astropy'
 
         # Now try Astropy dev with the latest Python and LTS with Python 3.x.
         - stage: Comprehensive tests
@@ -97,12 +82,11 @@ matrix:
         # time.
 
         - stage: Comprehensive tests
-          env: NUMPY_VERSION=1.14
+          env: PYTHON_VERSION=3.6 NUMPY_VERSION=1.14
 
         - stage: Comprehensive tests
           os: windows
           env: SETUP_CMD='test'
-               PYTHON_VERSION=3.7
 
         # Do a PEP8 test with flake8
         - stage: Comprehensive tests
