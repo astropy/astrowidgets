@@ -16,6 +16,7 @@ htmlcov
 MANIFEST
 .ipynb_checkpoints
 example_notebooks/test.png
+example_notebooks/spitzer_ds9.reg
 */version.py
 pip-wheel-metadata/
 
