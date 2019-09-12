@@ -635,7 +635,7 @@ class ImageWidget(ipyw.VBox):
                              '{}'.format(marker_name,
                                          ', '.join(RESERVED_MARKER_SET_NAMES)))
 
-    def add_regions(self, regions):
+    def add_regions(self, regions, marker_name='_astropy_regions'):
         """
         Creates markers in the image from given regions from
         the Astropy ``regions`` package.
@@ -646,8 +646,11 @@ class ImageWidget(ipyw.VBox):
 
         Parameters
         ----------
-        regions : obj
+        regions : list of obj
             ``regions`` shapes.
+
+        marker_name : str
+            Name to assign the markers created from regions.
 
         """
         from ginga.util import ap_region
@@ -656,7 +659,7 @@ class ImageWidget(ipyw.VBox):
         # added in another call.
         # TODO: How to get or set the canvas name?
         for reg in regions:
-            ap_region.add_region(self._viewer.canvas, reg)
+            ap_region.add_region(self._viewer.canvas, reg, tag=marker_name)
 
     def add_markers(self, table, x_colname='x', y_colname='y',
                     skycoord_colname='coord', use_skycoord=False,
