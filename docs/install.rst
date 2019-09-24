@@ -49,8 +49,8 @@ automatically when you install astrowidgets:
 * ``freetype``
 * ``aggdraw``
 * ``jupyterlab>=1``
+* ``nodejs``
 * ``opencv`` (optional, not installed by default)
-* ``nodejs`` (only if you plan to use Jupyter Lab, not installed by default)
 
 After installing dependencies, for Jupyter Lab, run::
 
