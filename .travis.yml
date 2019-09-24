@@ -74,7 +74,8 @@ matrix:
                GINGA_VERSION=development
                EVENT_TYPE='pull_request push cron'
         - stage: Comprehensive tests
-          env: ASTROPY_VERSION=lts
+          # Can remove pytest-astropy once lts is astropy 4
+          env: ASTROPY_VERSION=lts CONDA_DEPENDENCIES="$CONDA_DEPENDENCIES pytest-astropy"
 
         # Try all python versions and Numpy versions. Since we can assume that
         # the Numpy developers have taken care of testing Numpy with different
