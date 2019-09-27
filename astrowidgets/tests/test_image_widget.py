@@ -10,6 +10,39 @@ from astropy.coordinates import SkyCoord
 from ..core import ImageWidget, RESERVED_MARKER_SET_NAMES
 
 
+def _make_fake_ccd(with_wcs=True):
+    """
+    Generate a CCDData object for use with ImageWidget tests.
+
+    Parameters
+    ----------
+
+    with_wcs : bool, optional
+        If ``True`` the image will have a WCS attached to it,
+        which is useful for some of the marker tests.
+
+    Returns
+    -------
+
+    `astropy.nddata.CCDData`
+        CCD image
+    """
+    npix_side = 100
+    fake_image = np.random.randn(npix_side, npix_side)
+    if with_wcs:
+        wcs = WCS(naxis=2)
+        wcs.wcs.crpix = (fake_image.shape[0] / 2, fake_image.shape[1] / 2)
+        wcs.wcs.ctype = ('RA---TAN', 'DEC--TAN')
+        wcs.wcs.crval = (314.275419158, 31.6662781301)
+        wcs.wcs.pc = [[0.000153051015113, -3.20700931602e-05],
+                      [3.20704370872e-05, 0.000153072382405]]
+    else:
+        wcs = None
+
+    return CCDData(data=fake_image, wcs=wcs, unit='adu')
+
+
+
 def test_setting_image_width_height():
     image = ImageWidget()
     width = 200
@@ -40,15 +73,9 @@ def test_adding_markers_as_world_recovers_with_get_markers():
     Make sure that our internal conversion from world to pixel
     coordinates doesn't mess anything up.
     """
-    npix_side = 100
-    fake_image = np.random.randn(npix_side, npix_side)
-    wcs = WCS(naxis=2)
-    wcs.wcs.crpix = (fake_image.shape[0] / 2, fake_image.shape[1] / 2)
-    wcs.wcs.ctype = ('RA---TAN', 'DEC--TAN')
-    wcs.wcs.crval = (314.275419158, 31.6662781301)
-    wcs.wcs.pc = [[0.000153051015113, -3.20700931602e-05],
-                  [3.20704370872e-05, 0.000153072382405]]
-    fake_ccd = CCDData(data=fake_image, wcs=wcs, unit='adu')
+    fake_ccd = _make_fake_ccd(with_wcs=True)
+    npix_side = fake_ccd.shape[0]
+    wcs = fake_ccd.wcs
     iw = ImageWidget(pixel_coords_offset=0)
     iw.load_nddata(fake_ccd)
     # Get me 100 positions please, not right at the edge
