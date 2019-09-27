@@ -553,9 +553,10 @@ class ImageWidget(ipyw.VBox):
 
         try:
             c_mark = self._viewer.canvas.get_object_by_tag(marker_name)
-        except Exception as e:  # No markers
-            self.logger.warning(str(e))
-            return
+        except Exception:  # No markers
+            warnings.warn(f"Marker set named '{marker_name}' is empty",
+                          category=RuntimeWarning)
+            return None
 
         image = self._viewer.get_image()
         xy_col = []

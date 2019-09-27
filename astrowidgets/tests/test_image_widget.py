@@ -273,7 +273,7 @@ def test_marker_name_has_no_marks_warning():
     with pytest.warns(RuntimeWarning) as record:
         iw.get_markers(marker_name=bad_name)
 
-    assert f"Marker set named {bad_name} is empty" in record[0].message
+    assert f"Marker set named '{bad_name}' is empty" in str(record[0].message)
 
 
 def test_empty_marker_name_works_with_all():
