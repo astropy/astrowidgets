@@ -242,3 +242,64 @@ def test_get_marker_with_names():
 
     assert (expected['x'] == all_marks['x']).all()
     assert (expected['y'] == all_marks['y']).all()
+
+
+def test_unknown_marker_name_warning():
+    """
+    Regression test for https://github.com/astropy/astrowidgets/issues/97
+
+    This particular test checks that getting a marker name that
+    does not exist raises an error.
+    """
+    iw = ImageWidget()
+    bad_name = 'not a real marker name'
+    with pytest.raises(ValueError) as e:
+        iw.get_markers(marker_name=bad_name)
+
+    assert f"No markers named {bad_name}" in e.message
+
+
+def test_marker_name_has_no_marks_warning():
+    """
+    Regression test for https://github.com/astropy/astrowidgets/issues/97
+
+    This particular test checks that getting an empty table gives a
+    useful warning message.
+    """
+    iw = ImageWidget()
+    bad_name = 'empty marker set'
+    iw.start_marking(marker_name=bad_name)
+
+    with pytest.warns(RuntimeWarning) as record:
+        iw.get_markers(marker_name=bad_name)
+
+    assert f"Marker set named {bad_name} is empty" in record[0].message
+
+
+def test_empty_marker_name_works_with_all():
+    """
+    Regression test for https://github.com/astropy/astrowidgets/issues/97
+
+    This particular test checks that an empty table doesn't break
+    marker_name='all'. The bug only comes up if there is a coordinate
+    column, so use a fake image a WCS.
+    """
+    iw = ImageWidget()
+    fake_ccd = _make_fake_ccd(with_wcs=True)
+    iw.load_nddata(fake_ccd)
+
+    x = np.array([20, 30, 40])
+    y = np.array([40, 80, 100])
+    input_markers = Table(data=[x, y], names=['x', 'y'])
+    # Add some markers with our own name
+    iw.add_markers(input_markers, marker_name='nonsense')
+
+    # Start marking to create a new marker set that is empty
+    iw.start_marking(marker_name='empty')
+
+    marks = iw.get_markers(marker_name='all')
+    assert len(marks) == len(x)
+    assert 'empty' not in marks['marker name']
+
+
+    pass
