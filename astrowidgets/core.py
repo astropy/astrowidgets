@@ -545,6 +545,12 @@ class ImageWidget(ipyw.VBox):
 
             return stacked
 
+        # We should always allow the default name. The case
+        # where that table is empty will be handled in a moment.
+        if (marker_name not in self._marktags and
+                marker_name != self._default_mark_tag_name):
+            raise ValueError(f"No markers named '{marker_name}' found.")
+
         try:
             c_mark = self._viewer.canvas.get_object_by_tag(marker_name)
         except Exception as e:  # No markers

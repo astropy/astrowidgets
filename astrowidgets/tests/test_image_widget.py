@@ -244,7 +244,7 @@ def test_get_marker_with_names():
     assert (expected['y'] == all_marks['y']).all()
 
 
-def test_unknown_marker_name_warning():
+def test_unknown_marker_name_error():
     """
     Regression test for https://github.com/astropy/astrowidgets/issues/97
 
@@ -256,7 +256,7 @@ def test_unknown_marker_name_warning():
     with pytest.raises(ValueError) as e:
         iw.get_markers(marker_name=bad_name)
 
-    assert f"No markers named {bad_name}" in e.message
+    assert f"No markers named '{bad_name}'" in str(e)
 
 
 def test_marker_name_has_no_marks_warning():
