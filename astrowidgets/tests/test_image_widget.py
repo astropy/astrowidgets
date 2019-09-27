@@ -300,6 +300,3 @@ def test_empty_marker_name_works_with_all():
     marks = iw.get_markers(marker_name='all')
     assert len(marks) == len(x)
     assert 'empty' not in marks['marker name']
-
-
-    pass
