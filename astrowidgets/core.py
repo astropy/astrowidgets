@@ -560,7 +560,7 @@ class ImageWidget(ipyw.VBox):
         except Exception:
             # No markers in this table. Issue a warning and continue
             warnings.warn(f"Marker set named '{marker_name}' is empty",
-                          category=RuntimeWarning)
+                          category=UserWarning)
             return None
 
         image = self._viewer.get_image()
