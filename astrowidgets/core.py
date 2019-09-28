@@ -530,6 +530,10 @@ class ImageWidget(ipyw.VBox):
                                          y_colname=y_colname,
                                          skycoord_colname=skycoord_colname,
                                          marker_name=name)
+                if table is None:
+                    # No markers by this name, skip it
+                    continue
+
                 try:
                     coordinates.extend(c for c in table[skycoord_colname])
                 except KeyError:
@@ -545,11 +549,19 @@ class ImageWidget(ipyw.VBox):
 
             return stacked
 
+        # We should always allow the default name. The case
+        # where that table is empty will be handled in a moment.
+        if (marker_name not in self._marktags
+                and marker_name != self._default_mark_tag_name):
+            raise ValueError(f"No markers named '{marker_name}' found.")
+
         try:
             c_mark = self._viewer.canvas.get_object_by_tag(marker_name)
-        except Exception as e:  # No markers
-            self.logger.warning(str(e))
-            return
+        except Exception:
+            # No markers in this table. Issue a warning and continue
+            warnings.warn(f"Marker set named '{marker_name}' is empty",
+                          category=UserWarning)
+            return None
 
         image = self._viewer.get_image()
         xy_col = []

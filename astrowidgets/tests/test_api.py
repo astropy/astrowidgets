@@ -150,8 +150,10 @@ def test_reset_markers():
     image.add_markers(table, x_colname='x', y_colname='y',
                       skycoord_colname='coord', marker_name='test2')
     image.reset_markers()
-    assert image.get_markers(marker_name='test') is None
-    assert image.get_markers(marker_name='test2') is None
+    with pytest.raises(ValueError):
+        image.get_markers(marker_name='test')
+    with pytest.raises(ValueError):
+        image.get_markers(marker_name='test2')
 
 
 def test_remove_markers():

@@ -10,6 +10,38 @@ from astropy.coordinates import SkyCoord
 from ..core import ImageWidget, RESERVED_MARKER_SET_NAMES
 
 
+def _make_fake_ccd(with_wcs=True):
+    """
+    Generate a CCDData object for use with ImageWidget tests.
+
+    Parameters
+    ----------
+
+    with_wcs : bool, optional
+        If ``True`` the image will have a WCS attached to it,
+        which is useful for some of the marker tests.
+
+    Returns
+    -------
+
+    `astropy.nddata.CCDData`
+        CCD image
+    """
+    npix_side = 100
+    fake_image = np.random.randn(npix_side, npix_side)
+    if with_wcs:
+        wcs = WCS(naxis=2)
+        wcs.wcs.crpix = (fake_image.shape[0] / 2, fake_image.shape[1] / 2)
+        wcs.wcs.ctype = ('RA---TAN', 'DEC--TAN')
+        wcs.wcs.crval = (314.275419158, 31.6662781301)
+        wcs.wcs.pc = [[0.000153051015113, -3.20700931602e-05],
+                      [3.20704370872e-05, 0.000153072382405]]
+    else:
+        wcs = None
+
+    return CCDData(data=fake_image, wcs=wcs, unit='adu')
+
+
 def test_setting_image_width_height():
     image = ImageWidget()
     width = 200
@@ -40,15 +72,9 @@ def test_adding_markers_as_world_recovers_with_get_markers():
     Make sure that our internal conversion from world to pixel
     coordinates doesn't mess anything up.
     """
-    npix_side = 100
-    fake_image = np.random.randn(npix_side, npix_side)
-    wcs = WCS(naxis=2)
-    wcs.wcs.crpix = (fake_image.shape[0] / 2, fake_image.shape[1] / 2)
-    wcs.wcs.ctype = ('RA---TAN', 'DEC--TAN')
-    wcs.wcs.crval = (314.275419158, 31.6662781301)
-    wcs.wcs.pc = [[0.000153051015113, -3.20700931602e-05],
-                  [3.20704370872e-05, 0.000153072382405]]
-    fake_ccd = CCDData(data=fake_image, wcs=wcs, unit='adu')
+    fake_ccd = _make_fake_ccd(with_wcs=True)
+    npix_side = fake_ccd.shape[0]
+    wcs = fake_ccd.wcs
     iw = ImageWidget(pixel_coords_offset=0)
     iw.load_nddata(fake_ccd)
     # Get me 100 positions please, not right at the edge
@@ -215,3 +241,61 @@ def test_get_marker_with_names():
 
     assert (expected['x'] == all_marks['x']).all()
     assert (expected['y'] == all_marks['y']).all()
+
+
+def test_unknown_marker_name_error():
+    """
+    Regression test for https://github.com/astropy/astrowidgets/issues/97
+
+    This particular test checks that getting a marker name that
+    does not exist raises an error.
+    """
+    iw = ImageWidget()
+    bad_name = 'not a real marker name'
+    with pytest.raises(ValueError) as e:
+        iw.get_markers(marker_name=bad_name)
+
+    assert f"No markers named '{bad_name}'" in str(e.value)
+
+
+def test_marker_name_has_no_marks_warning():
+    """
+    Regression test for https://github.com/astropy/astrowidgets/issues/97
+
+    This particular test checks that getting an empty table gives a
+    useful warning message.
+    """
+    iw = ImageWidget()
+    bad_name = 'empty marker set'
+    iw.start_marking(marker_name=bad_name)
+
+    with pytest.warns(UserWarning) as record:
+        iw.get_markers(marker_name=bad_name)
+
+    assert f"Marker set named '{bad_name}' is empty" in str(record[0].message)
+
+
+def test_empty_marker_name_works_with_all():
+    """
+    Regression test for https://github.com/astropy/astrowidgets/issues/97
+
+    This particular test checks that an empty table doesn't break
+    marker_name='all'. The bug only comes up if there is a coordinate
+    column, so use a fake image a WCS.
+    """
+    iw = ImageWidget()
+    fake_ccd = _make_fake_ccd(with_wcs=True)
+    iw.load_nddata(fake_ccd)
+
+    x = np.array([20, 30, 40])
+    y = np.array([40, 80, 100])
+    input_markers = Table(data=[x, y], names=['x', 'y'])
+    # Add some markers with our own name
+    iw.add_markers(input_markers, marker_name='nonsense')
+
+    # Start marking to create a new marker set that is empty
+    iw.start_marking(marker_name='empty')
+
+    marks = iw.get_markers(marker_name='all')
+    assert len(marks) == len(x)
+    assert 'empty' not in marks['marker name']
