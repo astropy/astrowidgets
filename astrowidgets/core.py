@@ -551,8 +551,8 @@ class ImageWidget(ipyw.VBox):
 
         # We should always allow the default name. The case
         # where that table is empty will be handled in a moment.
-        if (marker_name not in self._marktags and
-                marker_name != self._default_mark_tag_name):
+        if (marker_name not in self._marktags
+                and marker_name != self._default_mark_tag_name):
             raise ValueError(f"No markers named '{marker_name}' found.")
 
         try:

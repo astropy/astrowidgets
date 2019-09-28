@@ -42,7 +42,6 @@ def _make_fake_ccd(with_wcs=True):
     return CCDData(data=fake_image, wcs=wcs, unit='adu')
 
 
-
 def test_setting_image_width_height():
     image = ImageWidget()
     width = 200
