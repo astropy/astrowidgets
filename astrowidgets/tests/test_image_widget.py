@@ -256,7 +256,7 @@ def test_unknown_marker_name_error():
     with pytest.raises(ValueError) as e:
         iw.get_markers(marker_name=bad_name)
 
-    assert f"No markers named '{bad_name}'" in str(e)
+    assert f"No markers named '{bad_name}'" in str(e.value)
 
 
 def test_marker_name_has_no_marks_warning():
