@@ -694,6 +694,11 @@ class ImageWidget(ipyw.VBox):
             coord_x, coord_y = image.wcs.wcs.all_world2pix(coord_val.ra.deg,
                                                            coord_val.dec.deg,
                                                            0)
+            # In the event a *single* marker has been added, coord_x and coord_y
+            # will be scalars. Make them arrays always.
+            if np.ndim(coord_x) == 0:
+                coord_x = np.array([coord_x])
+                coord_y = np.array([coord_y])
         else:  # Use X,Y
             coord_x = table[x_colname].data
             coord_y = table[y_colname].data

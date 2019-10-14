@@ -299,3 +299,22 @@ def test_empty_marker_name_works_with_all():
     marks = iw.get_markers(marker_name='all')
     assert len(marks) == len(x)
     assert 'empty' not in marks['marker name']
+
+
+def test_add_single_marker():
+    """
+    Test a few things related to naming marker sets
+    """
+    fake_ccd = _make_fake_ccd(with_wcs=True)
+    npix_side = fake_ccd.shape[0]
+    wcs = fake_ccd.wcs
+    iw = ImageWidget(pixel_coords_offset=0)
+    iw.load_nddata(fake_ccd)
+    # Get me 100 positions please, not right at the edge
+    marker_locs = np.random.randint(10,
+                                    high=npix_side - 10,
+                                    size=(100, 2))
+    marks_world = wcs.all_pix2world(marker_locs, 0)
+    marks_coords = SkyCoord(marks_world, unit='degree')
+    mark_coord_table = Table(data=[marks_coords], names=['coord'])
+    iw.add_markers(mark_coord_table[0], use_skycoord=True)
