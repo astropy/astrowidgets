@@ -696,7 +696,7 @@ class ImageWidget(ipyw.VBox):
                                                            0)
             # In the event a *single* marker has been added, coord_x and coord_y
             # will be scalars. Make them arrays always.
-            if np.isscalar(coord_x):
+            if np.ndim(coord_x) == 0:
                 coord_x = np.array([coord_x])
                 coord_y = np.array([coord_y])
         else:  # Use X,Y
