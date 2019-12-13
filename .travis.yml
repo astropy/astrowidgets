@@ -24,8 +24,8 @@ env:
         - NUMPY_VERSION=stable
         - ASTROPY_VERSION=stable
         - GINGA_VERSION=stable
-        - MAIN_CMD='python setup.py'
-        - SETUP_CMD='test'
+        - MAIN_CMD='pytest'
+        - SETUP_CMD='ccdproc'
         - PIP_DEPENDENCIES=''
         - EVENT_TYPE='pull_request push'
 
@@ -128,6 +128,8 @@ install:
     - if [[ $GINGA_VERSION == stable ]]; then pip -q install ginga; fi
 
 script:
+   - pip install tox tox-pypi-filter --upgrade
+   - pip install -e .
    - $MAIN_CMD $SETUP_CMD
 
 after_success:
