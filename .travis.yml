@@ -66,7 +66,7 @@ matrix:
 
         # Do a coverage test.
         - stage: Initial tests
-          env: SETUP_CMD='test --coverage'
+          env: TOXPOSARGS='--coverage'
 
         # Now try Astropy dev with the latest Python and LTS with Python 3.x.
         - stage: Comprehensive tests
