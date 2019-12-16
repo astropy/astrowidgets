@@ -86,7 +86,6 @@ matrix:
 
         - stage: Comprehensive tests
           os: windows
-          env: SETUP_CMD='test'
 
         # Do a PEP8 test with flake8
         - stage: Comprehensive tests
@@ -95,7 +94,6 @@ matrix:
         # Try MacOS X
         - stage: Cron tests
           os: osx
-          env: SETUP_CMD='test'
 
 install:
 
