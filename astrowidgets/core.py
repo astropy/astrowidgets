@@ -635,6 +635,23 @@ class ImageWidget(ipyw.VBox):
                              '{}'.format(marker_name,
                                          ', '.join(RESERVED_MARKER_SET_NAMES)))
 
+    def _append_marks_or_regions_by_marker_names(self, to_draw, marker_name):
+        pass
+        objs = []
+        try:
+            c_mark = self._viewer.canvas.get_object_by_tag(marker_name)
+        except Exception:
+            pass
+        else:
+            objs = c_mark.objects
+            self._viewer.canvas.delete_object_by_tag(marker_name)
+
+        # TODO: Test to see if we can mix WCS and data on the same canvas
+        objs.extend(to_draw)
+
+        self._viewer.canvas.add(self.dc.CompoundObject(*objs),
+                                tag=marker_name)
+
     def add_regions(self, regions, marker_name='_astropy_regions'):
         """
         Creates markers in the image from given regions from
@@ -655,11 +672,26 @@ class ImageWidget(ipyw.VBox):
         """
         from ginga.util import ap_region
 
+        self._marktags.add(marker_name)
         # Regions will be appended if other regions were previously
         # added in another call.
         # TODO: How to get or set the canvas name?
-        for reg in regions:
-            ap_region.add_region(self._viewer.canvas, reg, tag=marker_name)
+
+        objs = [ap_region.astropy_region_to_ginga_canvas_object(reg)
+                for reg in regions]
+        self._append_marks_or_regions_by_marker_names(objs, marker_name)
+
+    def remove_regions(self, marker_name='_astropy_regions'):
+        """
+        Remove regions by name.
+
+        Parameters
+        ----------
+
+        marker_name : ``str``, optional
+            Name of markers to remove.
+        """
+        self.remove_markers(marker_name=marker_name)
 
     def add_markers(self, table, x_colname='x', y_colname='y',
                     skycoord_colname='coord', use_skycoord=False,
@@ -739,21 +771,10 @@ class ImageWidget(ipyw.VBox):
                 coord_x = coord_x - self._pixel_offset
                 coord_y = coord_y - self._pixel_offset
 
-        # Prepare canvas and retain existing marks
-        objs = []
-        try:
-            c_mark = self._viewer.canvas.get_object_by_tag(marker_name)
-        except Exception:
-            pass
-        else:
-            objs = c_mark.objects
-            self._viewer.canvas.delete_object_by_tag(marker_name)
-
         # TODO: Test to see if we can mix WCS and data on the same canvas
-        objs += [self._marker(x=x, y=y, coord=coord_type)
+        marks = [self._marker(x=x, y=y, coord=coord_type)
                  for x, y in zip(coord_x, coord_y)]
-        self._viewer.canvas.add(self.dc.CompoundObject(*objs),
-                                tag=marker_name)
+        self._append_marks_or_regions_by_marker_names(marks, marker_name)
 
     def remove_markers(self, marker_name=None):
         """
