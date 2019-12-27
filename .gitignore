@@ -16,6 +16,7 @@ htmlcov
 MANIFEST
 .ipynb_checkpoints
 example_notebooks/test.png
+*/version.py
 
 # Sphinx
 docs/api
