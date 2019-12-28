@@ -3,3 +3,4 @@ numpy
 astropy
 matplotlib
 sphinx-astropy
+pygments >=2.4.1
