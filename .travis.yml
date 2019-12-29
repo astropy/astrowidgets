@@ -24,8 +24,8 @@ env:
         - NUMPY_VERSION=stable
         - ASTROPY_VERSION=stable
         - GINGA_VERSION=stable
-        - MAIN_CMD='pytest'
-        - SETUP_CMD='astrowidgets'
+        - MAIN_CMD='tox -e'
+        - SETUP_CMD='test'
         - PIP_DEPENDENCIES=''
         - EVENT_TYPE='pull_request push'
 
