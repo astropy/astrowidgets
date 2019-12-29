@@ -17,6 +17,7 @@ MANIFEST
 .ipynb_checkpoints
 example_notebooks/test.png
 */version.py
+pip-wheel-metadata/
 
 # Sphinx
 docs/api
