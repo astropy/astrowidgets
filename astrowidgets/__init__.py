@@ -6,6 +6,8 @@
 from ._astropy_init import *
 # ----------------------------------------------------------------------------
 
+from .core import *
+
 # Enforce Python version check during package import.
 # This is the same check as the one at the top of setup.py
 import sys
