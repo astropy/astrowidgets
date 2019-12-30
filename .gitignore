@@ -10,13 +10,14 @@ __pycache__
 *.c
 
 # Other generated files
-*/version.py
 */cython_version.py
 htmlcov
 .coverage
 MANIFEST
 .ipynb_checkpoints
 example_notebooks/test.png
+*/version.py
+pip-wheel-metadata/
 
 # Sphinx
 docs/api

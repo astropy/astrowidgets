@@ -24,7 +24,7 @@ env:
         - NUMPY_VERSION=stable
         - ASTROPY_VERSION=stable
         - GINGA_VERSION=stable
-        - MAIN_CMD='python setup.py'
+        - MAIN_CMD='tox -e'
         - SETUP_CMD='test'
         - PIP_DEPENDENCIES=''
         - EVENT_TYPE='pull_request push'
@@ -61,12 +61,9 @@ matrix:
     fast_finish: true
 
     include:
-        - stage: Initial tests
-          env: SETUP_CMD='egg_info'
-
         # Do a coverage test.
         - stage: Initial tests
-          env: SETUP_CMD='test --coverage'
+          env: SETUP_CMD='coverage'
 
         # Now try Astropy dev with the latest Python and LTS with Python 3.x.
         - stage: Comprehensive tests
@@ -87,7 +84,6 @@ matrix:
 
         - stage: Comprehensive tests
           os: windows
-          env: SETUP_CMD='test'
 
         # Do a PEP8 test with flake8
         - stage: Comprehensive tests
@@ -96,7 +92,6 @@ matrix:
         # Try MacOS X
         - stage: Cron tests
           os: osx
-          env: SETUP_CMD='test'
 
 install:
 
@@ -128,9 +123,11 @@ install:
     - if [[ $GINGA_VERSION == stable ]]; then pip -q install ginga; fi
 
 script:
+   - pip install tox tox-pypi-filter --upgrade
+   - pip install -e .
    - $MAIN_CMD $SETUP_CMD
 
 after_success:
-    # If coveralls.io is set up for this package, uncomment the line below.
-    # The coveragerc file may be customized as needed for your package.
-    # - if [[ $SETUP_CMD == *coverage* ]]; then coveralls --rcfile='astrowidgets/tests/coveragerc'; fi
+    # Upload coverage to codecov
+    - pip install codecov
+    - codecov
