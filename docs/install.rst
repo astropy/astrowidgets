@@ -4,6 +4,11 @@ Installation
 Install with pip
 ----------------
 
+If your ``ipywidgets`` was installed from ``pip`` instead of ``conda``,
+you need to run one extra step to enable widget display in the notebook::
+
+    jupyter nbextension enable --py widgetsnbextension
+
 Note that to use ``astrowidgets`` with Jupyter Lab you need to
 install `nodejs from here <https://nodejs.org/en/download/>`_::
 
