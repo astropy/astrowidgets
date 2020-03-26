@@ -7,6 +7,7 @@ try:
                                                TESTED_VERSIONS)
 except ImportError:
     PYTEST_HEADER_MODULES = {}
+    TESTED_VERSIONS = {}
 
 # Uncomment the following line to treat all DeprecationWarnings as
 # exceptions.
@@ -17,13 +18,10 @@ except ImportError:
 # the list of packages for which version numbers are displayed when running
 # the tests. Making it pass for KeyError is essential in some cases when
 # the package uses other astropy affiliated packages.
-try:
-    PYTEST_HEADER_MODULES['Astropy'] = 'astropy'
-    PYTEST_HEADER_MODULES['Ginga'] = 'ginga'
-    del PYTEST_HEADER_MODULES['h5py']
-    del PYTEST_HEADER_MODULES['Pandas']
-except KeyError:
-    pass
+PYTEST_HEADER_MODULES['Astropy'] = 'astropy'
+PYTEST_HEADER_MODULES['Ginga'] = 'ginga'
+PYTEST_HEADER_MODULES.pop('h5py')
+PYTEST_HEADER_MODULES.pop('Pandas')
 
 # Uncomment the following lines to display the version number of the
 # package rather than the version number of Astropy in the top line when
