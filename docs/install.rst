@@ -25,7 +25,7 @@ conda installation::
     conda install -c conda-forge astrowidgets nodejs
     jupyter labextension install @jupyter-widgets/jupyterlab-manager
     # Optional, but avoids a rebuild when you open lab
-    jupyter labextension build
+    jupyter lab build
 
 .. note::
 
