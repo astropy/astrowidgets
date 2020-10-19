@@ -209,9 +209,13 @@ class ImageWidget(ipyw.VBox):
             val = 'X: {:.2f}, Y: {:.2f}'.format(data_x + self._pixel_offset,
                                                 data_y + self._pixel_offset)
             if image.wcs.wcs is not None:
-                ra, dec = image.pixtoradec(data_x, data_y)
-                val += ' (RA: {}, DEC: {})'.format(
-                    raDegToString(ra), decDegToString(dec))
+                try:
+                    ra, dec = image.pixtoradec(data_x, data_y)
+                    val += ' (RA: {}, DEC: {})'.format(
+                        raDegToString(ra), decDegToString(dec))
+                except Exception:
+                    val += ' (RA, DEC: WCS error)'
+
             val += ', value: {}'.format(imval)
             self._jup_coord.value = val
 
