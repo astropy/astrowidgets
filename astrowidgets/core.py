@@ -214,7 +214,8 @@ class ImageWidget(ipyw.VBox):
                     val += ' (RA: {}, DEC: {})'.format(
                         raDegToString(ra), decDegToString(dec))
                 except Exception:
-                    pass
+                    val += ' (RA, DEC: WCS error)'
+
             val += ', value: {}'.format(imval)
             self._jup_coord.value = val
 
