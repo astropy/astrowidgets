@@ -5,9 +5,9 @@ Widgets for the Jupyter notebook and JupyterLab
     :target: http://www.astropy.org
     :alt: Powered by Astropy Badge
 
-.. image:: https://travis-ci.org/astropy/astrowidgets.svg?branch=master
-    :target: https://travis-ci.org/astropy/astrowidgets
-    :alt: Travis CI Status
+.. image:: https://github.com/astropy/astrowidgets/workflows/CI/badge.svg
+    :target: https://github.com/astropy/astrowidgets/actions
+    :alt: CI Status
 
 .. image:: https://readthedocs.org/projects/astrowidgets/badge/?version=latest
     :target: https://astrowidgets.readthedocs.io/en/latest/?badge=latest
