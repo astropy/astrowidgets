@@ -1,4 +1,4 @@
-0.1.0 (unreleased)
-==================
+1.0 (unreleased)
+================
 
-First release.
+TBD -- First stable release.
