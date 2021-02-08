@@ -1,5 +1,7 @@
 """``astrowidgets`` with ``bqplot`` as backend."""
 
+import math
+
 import numpy as np
 
 # Jupyter widgets
@@ -7,6 +9,7 @@ import ipywidgets as ipyw
 
 # bqplot
 from bqplot import Figure, HeatMap, LinearScale, ColorScale, Axis, ColorAxis
+from bqplot_image_gl.interacts import MouseInteraction
 
 __all__ = ['ImageWidget']
 
@@ -83,18 +86,35 @@ class ImageWidget(ipyw.VBox):
         """
         return self._pixel_offset
 
-    def _mouse_move_cb(self, *args):
+    def _mouse_cb(self, interaction, data, buffers):
         """
-        Callback to display position in RA/DEC deg.
+        Callback for mouse events; e.g., to display position in RA/DEC deg.
         """
-        # FIXME: Where is the X and Y info?
-        self._jup_coord.value = f'{args}'
+        event = data['event']
+        if event not in ('mousemove', 'click', 'dblclick', 'contextmenu'):
+            return  # no-op
 
-        # TODO: Add WCS support
-        #val = 'X: {:.2f}, Y: {:.2f}'.format(data_x + self._pixel_offset,
-        #                                    data_y + self._pixel_offset)
-        #val += ', value: {}'.format(imval)
-        #self._jup_coord.value = val
+        # https://github.com/glue-viz/bqplot-image-gl/pull/37
+        if data['event'] == 'mousemove':
+            image = self._jup_img.marks[0]
+            domain_x = data['domain']['x']
+            domain_y = data['domain']['y']
+            pixel_x = (domain_x - image.x[0]) / (image.x[1] - image.x[0])
+            pixel_y = (domain_y - image.y[0]) / (image.y[1] - image.y[0])
+            # TODO: think about +/-1 and pixel edges
+            ix = int(math.floor(pixel_x))
+            iy = int(math.floor(pixel_y))
+            if pixel_x >= 0 and pixel_x < image.color.shape[1] and pixel_y >= 0 and pixel_y < image.color.shape[0]:
+                imval = image.color[iy, ix]
+            else:
+                imval = "NA"
+            # TODO: Add WCS support
+            val = f'X: {pixel_x + self._pixel_offset:.2f}, Y: {pixel_y + self._pixel_offset:.2f}, value: {imval}'
+        # TODO: Handle clicks
+        else:  # 'click', 'dblclick', 'contextmenu'
+            val = f'DEBUG {event}: {data}'
+
+        self._jup_coord.value = val
 
     def load_array(self, arr):
         """Load a 2D array into the viewer.
@@ -114,13 +134,16 @@ class ImageWidget(ipyw.VBox):
                       scales={'x': x_sc, 'y': y_sc, 'color': col_sc})
         ax_x = Axis(scale=x_sc)
         ax_y = Axis(scale=y_sc, orientation='vertical')
-        ax_c = ColorAxis(scale=col_sc)
 
-        # FIXME: Does not work
-        # https://github.com/bqplot/bqplot/issues/1269
-        img.on_hover(self._mouse_move_cb)
+        # TODO: Unset num_ticks after this issue is resolved
+        # https://github.com/bqplot/bqplot/issues/1274
+        ax_c = ColorAxis(scale=col_sc, num_ticks=5)
 
-        self._jup_img.marks = [img]
+        self._jup_img.marks = (img, )
         self._jup_img.axes = [ax_x, ax_y, ax_c]
         self._jup_img.min_aspect_ratio = aspect_ratio
         self._jup_img.max_aspect_ratio = aspect_ratio
+
+        self._jup_img.interaction = MouseInteraction(
+            x_scale=img.scales['x'], y_scale=img.scales['y'], move_throttle=70)
+        self._jup_img.interaction.on_msg(self._mouse_cb)
