@@ -16,6 +16,7 @@ python:
       path: .
       extra_requirements:
         - docs
+        - ginga
 
 # Don't build any extra formats
 formats: []
