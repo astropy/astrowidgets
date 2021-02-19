@@ -18,6 +18,7 @@ MANIFEST
 example_notebooks/test.png
 */version.py
 pip-wheel-metadata/
+example_notebooks/ginga/test.png
 
 # Sphinx
 docs/api

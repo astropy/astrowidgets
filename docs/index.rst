@@ -1,6 +1,6 @@
-************
-astrowidgets
-************
+*************************************
+Image widget for Jupyter Lab/Notebook
+*************************************
 
 ``astrowidgets`` aims to be a set of astronomy widgets for Jupyter Lab
 or Notebook, leveraging the Astropy ecosystem.
@@ -14,21 +14,13 @@ or Notebook, leveraging the Astropy ecosystem.
     Please let us know what would make the tool easier to use on our
     `GitHub issue tracker`_.
 
-Getting started
-===============
+Contents:
 
 .. toctree::
     :maxdepth: 1
 
     install
-    astrowidgets/index
-
-
-Reference/API
-=============
-
-.. automodapi:: astrowidgets
-    :no-main-docstr:
-    :no-inheritance-diagram:
+    abstract
+    ginga
 
 .. _GitHub issue tracker: https://github.com/astropy/astrowidgets/issues
