@@ -62,10 +62,6 @@ class TestGingaWidget:
         self.image.zoom(2)
         assert self.image.zoom_level == 6  # 3 x 2
 
-    @pytest.mark.xfail(reason='Not implemented yet')
-    def test_select_points(self):
-        self.image.select_points()
-
     def test_marking_operations(self):
         marks = self.image.get_all_markers()
         assert marks is None
