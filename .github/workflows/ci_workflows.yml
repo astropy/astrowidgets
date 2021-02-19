@@ -47,10 +47,11 @@ jobs:
             python: 3.9
             toxenv: py39-test-devdeps
 
-          - name: Python 3.6 with Ginga backend (old)
-            os: ubuntu-latest
-            python: 3.6
-            toxenv: py36-test-oldestdeps
+          # NOTE: Uncomment when we really support oldest deps
+          #- name: Python 3.6 with Ginga backend (old)
+          #  os: ubuntu-latest
+          #  python: 3.6
+          #  toxenv: py36-test-oldestdeps
 
     steps:
     - name: Checkout code
