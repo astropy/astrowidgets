@@ -177,7 +177,8 @@ class TestGingaWidget:
         self.image.remove_all_markers()
         assert len(self.image.get_marker_names()) == 0
         assert self.image.get_all_markers() is None
-        assert self.image.get_markers_by_name(self.image._default_mark_tag_name) is None
+        with pytest.warns(UserWarning, match='is empty'):
+            assert self.image.get_markers_by_name(self.image._default_mark_tag_name) is None
 
         with pytest.raises(ValueError, match="No markers named 'test1'"):
             self.image.get_markers_by_name('test1')

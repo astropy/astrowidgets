@@ -102,7 +102,8 @@ class TestGingaWidgetWithWCS:
 
         assert self.image.get_marker_names() == ['empty', 'nowcs']
 
-        marks = self.image.get_all_markers()
+        with pytest.warns(UserWarning, match='is empty'):
+            marks = self.image.get_all_markers()
         assert len(marks) == len(x)
         assert 'empty' not in marks['marker name']
 
