@@ -1,4 +1,5 @@
-"""Module containing ``astrowidgets`` implemented with Ginga backend.
+"""The ``astrowidgets.ginga`` module contains a widget implemented with the
+Ginga backend.
 
 For this to work, ``astrowidgets`` must be installed along with the optional
 dependencies specified for the Ginga backend; e.g.,::

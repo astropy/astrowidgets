@@ -45,6 +45,8 @@ setup_cfg = dict(conf.items('metadata'))
 
 # -- General configuration ----------------------------------------------------
 
+autodoc_inherit_docstrings = True
+
 # By default, highlight as Python 3.
 highlight_language = 'python3'
 

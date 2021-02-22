@@ -90,4 +90,10 @@ For more details, see `this discussion of opencv and astrowidgets
 API
 ---
 
-.. automodapi:: astrowidgets.ginga
+.. automodule:: astrowidgets.ginga
+
+.. inheritance-diagram:: astrowidgets.ginga.ImageWidget
+    :top-classes: ipywidgets.VBox, astrowidgets.core.BaseImageWidget
+
+.. autoclass:: astrowidgets.ginga.ImageWidget
+    :members:
