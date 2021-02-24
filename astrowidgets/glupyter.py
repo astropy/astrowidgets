@@ -392,11 +392,9 @@ def _new_data_from_hdulist(hdulist, numhdu):
     return data
 
 
-def _gen_random_label():
-    """Generate some string."""
-    import hashlib
-    import time
+def _gen_random_label(prefix='data|'):
+    """Generate unique identifier."""
+    import base64
+    import uuid
 
-    m = hashlib.md5()
-    m.update(time.ctime().encode())
-    return m.hexdigest()
+    return f'{prefix}{str(base64.b85encode(uuid.uuid4().bytes), "utf-8")}'
