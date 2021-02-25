@@ -14,10 +14,11 @@ import warnings
 import matplotlib.pyplot as plt
 from astropy.io import fits
 
+from bqplot_image_gl.interacts import MouseInteraction
+
 with warnings.catch_warnings():
     # Glue has warnings that we cannot do anything about.
     warnings.simplefilter('ignore')
-    from bqplot_image_gl.interacts import MouseInteraction
     from glue.core.coordinates import (
         coordinates_from_header, coordinates_from_wcs)
     from glue.core.data import Data
@@ -150,6 +151,7 @@ class ImageWidget(BaseImageWidget):
             else:
                 value = "NA"
             val += f', value: {value}'
+            self._jup_coord.value = val
 
         # FIXME: Handle clicks
         elif event == 'click':
@@ -173,8 +175,6 @@ class ImageWidget(BaseImageWidget):
                 with self.print_out:
                     print(f'Centered on X={x + self._pixel_offset} '
                           f'Y={y + self._pixel_offset}')
-
-        self._jup_coord.value = val
 
     def load_fits(self, filename, numhdu=0, memmap=None):
         """Load a FITS file into the viewer.
