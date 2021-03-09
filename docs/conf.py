@@ -151,7 +151,7 @@ man_pages = [('index', project.lower(), project + u' Documentation',
 #     if versionmod.version.release:
 #         edit_on_github_branch = "v" + versionmod.version.version
 #     else:
-#         edit_on_github_branch = "master"
+#         edit_on_github_branch = "main"
 
 #     edit_on_github_source_root = ""
 #     edit_on_github_doc_root = "docs"
