@@ -2,9 +2,11 @@ import numpy as np
 
 import pytest
 
+from astropy import units as u
 from astropy.io import fits
 from astropy.nddata import NDData
 from astropy.table import Table
+from astropy.utils.exceptions import AstropyDeprecationWarning
 
 from ginga.ColorDist import ColorDistBase
 
@@ -42,7 +44,26 @@ def test_offset_to():
     image = ImageWidget()
     dx = 10
     dy = 10
-    image.offset_to(dx, dy)
+    with pytest.warns(AstropyDeprecationWarning):
+        image.offset_to(dx, dy)
+
+
+def test_offset_by():
+    image = ImageWidget()
+
+    # Pixels
+    image.offset_by(10, 10)
+    image.offset_by(10 * u.pix, 10 * u.dimensionless_unscaled)
+    image.offset_by(10, 10 * u.pix)
+
+    # Sky
+    image.offset_by(1 * u.arcsec, 0.001 * u.deg)
+
+    with pytest.raises(u.UnitConversionError):
+        image.offset_by(1 * u.arcsec, 1 * u.AA)
+
+    with pytest.raises(ValueError, match='but dy is of type'):
+        image.offset_by(1 * u.arcsec, 1)
 
 
 def test_zoom_level():
@@ -271,10 +292,10 @@ def test_scroll_pan():
         assert image.scroll_pan is val
 
 
-def test_save():
+def test_save(tmp_path):
     image = ImageWidget()
     filename = 'woot.png'
-    image.save(filename)
+    image.save(tmp_path / filename)
 
 
 def test_width_height():
