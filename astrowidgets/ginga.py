@@ -13,9 +13,11 @@ import warnings
 
 import ipywidgets as ipyw
 import numpy as np
+from astropy import units as u
 from astropy.coordinates import SkyCoord
 from astropy.io import fits
 from astropy.table import Table, vstack
+from astropy.utils.decorators import deprecated
 
 from ginga.AstroImage import AstroImage
 from ginga.canvas.CanvasObject import drawCatalog
@@ -320,7 +322,25 @@ class ImageWidget(ipyw.VBox):
         else:
             self._viewer.set_pan(*(np.asarray(point) - self._pixel_offset))
 
+    @deprecated('0.3', alternative='offset_by')
     def offset_to(self, dx, dy, skycoord_offset=False):
+        """
+        Move the center to a point that is given offset
+        away from the current center.
+
+        .. note:: This is deprecated. Use :meth:`offset_by`.
+
+        Parameters
+        ----------
+        dx, dy : float
+            Offset value. Unit is assumed based on
+            ``skycoord_offset``.
+
+        skycoord_offset : bool
+            If `True`, offset must be given in degrees.
+            Otherwise, they are in pixel values.
+
+        """
         if skycoord_offset:
             coord = 'wcs'
         else:
@@ -328,6 +348,28 @@ class ImageWidget(ipyw.VBox):
 
         pan_x, pan_y = self._viewer.get_pan(coord=coord)
         self._viewer.set_pan(pan_x + dx, pan_y + dy, coord=coord)
+
+    def offset_by(self, dx, dy):
+        """
+        Move the center to a point that is given offset
+        away from the current center.
+
+        Parameters
+        ----------
+        dx, dy : float or `~astropy.unit.Quantity`
+            Offset value. Without a unit, assumed to be pixel offsets.
+            If a unit is attached, offset by pixel or sky is assumed from
+            the unit.
+
+        """
+        dx_val, dx_coord = _offset_is_pixel_or_sky(dx)
+        dy_val, dy_coord = _offset_is_pixel_or_sky(dy)
+
+        if dx_coord != dy_coord:
+            raise ValueError(f'dx is of type {dx_coord} but dy is of type {dy_coord}')
+
+        pan_x, pan_y = self._viewer.get_pan(coord=dx_coord)
+        self._viewer.set_pan(pan_x + dx_val, pan_y + dy_val, coord=dx_coord)
 
     @property
     def zoom_level(self):
@@ -902,4 +944,17 @@ class ImageWidget(ipyw.VBox):
         with open(filename, 'wb') as f:
             f.write(self._jup_img.value)
 
-        self.logger.info(f'{filename} written')
+
+def _offset_is_pixel_or_sky(x):
+    if isinstance(x, u.Quantity):
+        if x.unit in (u.dimensionless_unscaled, u.pix):
+            coord = 'data'
+            val = x.value
+        else:
+            coord = 'wcs'
+            val = x.to_value(u.deg)
+    else:
+        coord = 'data'
+        val = x
+
+    return val, coord
