@@ -3,6 +3,7 @@
 # STDLIB
 import functools
 import warnings
+from collections import namedtuple
 
 # THIRD-PARTY
 import numpy as np
@@ -21,13 +22,17 @@ from ginga.canvas.CanvasObject import drawCatalog
 from ginga.web.jupyterw.ImageViewJpw import EnhancedCanvasView
 from ginga.util.wcs import raDegToString, decDegToString
 
-__all__ = ['ImageWidget']
+__all__ = ['ImageWidget', 'MarkerStyle']
 
 # Allowed locations for cursor display
 ALLOWED_CURSOR_LOCATIONS = ['top', 'bottom', None]
 
 # List of marker names that are for internal use only
 RESERVED_MARKER_SET_NAMES = ['all']
+
+# Marker style (might be backend specific)
+MarkerStyle = namedtuple('MarkerStyle', ['type', 'color', 'radius'],
+                         defaults=['circle', 'cyan', 20])
 
 
 class ImageWidget(ipyw.VBox):
@@ -131,7 +136,7 @@ class ImageWidget(ipyw.VBox):
         bind_map.map_event(None, ('shift',), 'ms_right', 'contrast_restore')
 
         # Marker
-        self.marker = {'type': 'circle', 'color': 'cyan', 'radius': 20}
+        self.marker_style = MarkerStyle()
         # Maintain marker tags as a set because we do not want
         # duplicate names.
         self._marktags = set()
@@ -436,7 +441,7 @@ class ImageWidget(ipyw.VBox):
         return self._is_marking
 
     def start_marking(self, marker_name=None,
-                      marker=None):
+                      marker_style=None):
         """
         Start marking, with option to name this set of markers or
         to specify the marker style.
@@ -456,8 +461,8 @@ class ImageWidget(ipyw.VBox):
         else:
             self._interactive_marker_set_name = \
                 self._interactive_marker_set_name_default
-        if marker is not None:
-            self.marker = marker
+        if marker_style is not None:
+            self.marker_style = marker_style
 
     def stop_marking(self, clear_markers=False):
         """
@@ -480,7 +485,7 @@ class ImageWidget(ipyw.VBox):
                 self.reset_markers()
 
     @property
-    def marker(self):
+    def marker_style(self):
         """
         Marker to use.
 
@@ -488,23 +493,25 @@ class ImageWidget(ipyw.VBox):
 
         Marker can be set as follows::
 
-            {'type': 'circle', 'color': 'cyan', 'radius': 20}
-            {'type': 'cross', 'color': 'green', 'radius': 20}
-            {'type': 'plus', 'color': 'red', 'radius': 20}
+            MarkerStyle(type='circle', color='cyan', radius=20)
+            MarkerStyle(type='cross', color='green', radius=20)
+            MarkerStyle(type='plus', color='red', radius=20)
 
         """
         # Change the marker from a very ginga-specific type (a partial
         # of a ginga drawing canvas type) to a generic dict, which is
         # what we expect the user to provide.
         #
-        # That makes things like self.marker = self.marker work.
-        return self._marker_dict
+        # That makes things like self.marker_style = self.marker_style work.
+        return self._marker_style
 
-    @marker.setter
-    def marker(self, val):
-        # Make a new copy to avoid modifying the dict that the user passed in.
-        _marker = val.copy()
-        marker_type = _marker.pop('type')
+    @marker_style.setter
+    def marker_style(self, val):
+        if not isinstance(val, MarkerStyle):
+            raise TypeError('marker style must be defined using MarkerStyle')
+
+        _marker = val._asdict()
+        marker_type = val.type
         if marker_type == 'circle':
             self._marker = functools.partial(self.dc.Circle, **_marker)
         elif marker_type == 'plus':
@@ -519,7 +526,7 @@ class ImageWidget(ipyw.VBox):
             raise NotImplementedError(
                 'Marker type "{}" not supported'.format(marker_type))
         # Only set this once we have successfully created a marker
-        self._marker_dict = val
+        self._marker_style = val
 
     def get_markers(self, x_colname='x', y_colname='y',
                     skycoord_colname='coord',
