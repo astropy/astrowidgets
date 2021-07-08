@@ -10,7 +10,7 @@ from astropy.utils.exceptions import AstropyDeprecationWarning
 
 from ginga.ColorDist import ColorDistBase
 
-from ..core import ImageWidget, ALLOWED_CURSOR_LOCATIONS
+from ..core import ImageWidget, MarkerStyle, ALLOWED_CURSOR_LOCATIONS
 
 
 def test_load_fits():
@@ -116,11 +116,11 @@ def test_start_marking():
     image.scroll_pan = False
     assert not image.scroll_pan
 
-    marker_style = {'color': 'yellow', 'radius': 10, 'type': 'cross'}
+    marker_style = MarkerStyle(color='yellow', radius=10, type='cross')
     image.start_marking(marker_name='something',
-                        marker=marker_style)
+                        marker_style=marker_style)
     assert image.is_marking
-    assert image.marker == marker_style
+    assert image.marker_style == marker_style
     assert not image.click_center
     assert not image.click_drag
 
@@ -152,10 +152,12 @@ def test_add_markers():
 
 def test_set_markers():
     image = ImageWidget()
-    image.marker = {'color': 'yellow', 'radius': 10, 'type': 'cross'}
-    assert 'cross' in str(image.marker)
-    assert 'yellow' in str(image.marker)
-    assert '10' in str(image.marker)
+    marker = MarkerStyle(color='yellow', radius=10, type='cross')
+    image.start_marking(marker_style=marker)
+    assert image.marker_style.type == 'cross'
+    assert image.marker_style.color == 'yellow'
+    assert image.marker_style.radius == 10
+    assert image.marker_style.linewidth == 1
 
 
 def test_reset_markers():

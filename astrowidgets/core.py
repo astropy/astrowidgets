@@ -31,8 +31,18 @@ ALLOWED_CURSOR_LOCATIONS = ['top', 'bottom', None]
 RESERVED_MARKER_SET_NAMES = ['all']
 
 # Marker style (might be backend specific)
-MarkerStyle = namedtuple('MarkerStyle', ['type', 'color', 'radius'],
-                         defaults=['circle', 'cyan', 20])
+MarkerStyle = namedtuple(
+    'MarkerStyle', ['type', 'color', 'radius', 'linewidth'],
+    defaults=['circle', 'cyan', 20, 1])
+# TODO: Add more examples
+MarkerStyle.__doc__ += """
+
+Marker can be set as follows::
+
+    MarkerStyle(type='circle', color='cyan', radius=20)
+    MarkerStyle(type='cross', color='green', radius=20)
+    MarkerStyle(type='plus', color='red', radius=20)
+"""
 
 
 class ImageWidget(ipyw.VBox):
@@ -136,7 +146,7 @@ class ImageWidget(ipyw.VBox):
         bind_map.map_event(None, ('shift',), 'ms_right', 'contrast_restore')
 
         # Marker
-        self.marker_style = MarkerStyle()
+        self._validate_and_set_marker_style(MarkerStyle())
         # Maintain marker tags as a set because we do not want
         # duplicate names.
         self._marktags = set()
@@ -440,8 +450,7 @@ class ImageWidget(ipyw.VBox):
         """
         return self._is_marking
 
-    def start_marking(self, marker_name=None,
-                      marker_style=None):
+    def start_marking(self, marker_name=None, marker_style=None):
         """
         Start marking, with option to name this set of markers or
         to specify the marker style.
@@ -462,7 +471,7 @@ class ImageWidget(ipyw.VBox):
             self._interactive_marker_set_name = \
                 self._interactive_marker_set_name_default
         if marker_style is not None:
-            self.marker_style = marker_style
+            self._validate_and_set_marker_style(marker_style)
 
     def stop_marking(self, clear_markers=False):
         """
@@ -486,27 +495,13 @@ class ImageWidget(ipyw.VBox):
 
     @property
     def marker_style(self):
-        """
-        Marker to use.
-
-        .. todo:: Add more examples.
-
-        Marker can be set as follows::
-
-            MarkerStyle(type='circle', color='cyan', radius=20)
-            MarkerStyle(type='cross', color='green', radius=20)
-            MarkerStyle(type='plus', color='red', radius=20)
-
-        """
+        """Current marker style in use."""
         # Change the marker from a very ginga-specific type (a partial
         # of a ginga drawing canvas type) to a generic dict, which is
         # what we expect the user to provide.
-        #
-        # That makes things like self.marker_style = self.marker_style work.
         return self._marker_style
 
-    @marker_style.setter
-    def marker_style(self, val):
+    def _validate_and_set_marker_style(self, val):
         if not isinstance(val, MarkerStyle):
             raise TypeError('marker style must be defined using MarkerStyle')
 
@@ -671,7 +666,7 @@ class ImageWidget(ipyw.VBox):
 
     def add_markers(self, table, x_colname='x', y_colname='y',
                     skycoord_colname='coord', use_skycoord=False,
-                    marker_name=None):
+                    marker_name=None, marker_style=None):
         """
         Creates markers in the image at given points.
 
@@ -700,6 +695,10 @@ class ImageWidget(ipyw.VBox):
         marker_name : str, optional
             Name to assign the markers in the table. Providing a name
             allows markers to be removed by name at a later time.
+
+        marker_style: `MarkerStyle`, optional
+            Marker style to use. If not given, use the current style.
+
         """
         # TODO: Resolve https://github.com/ejeschke/ginga/issues/672
 
@@ -711,6 +710,8 @@ class ImageWidget(ipyw.VBox):
             marker_name = self._default_mark_tag_name
 
         self._validate_marker_name(marker_name)
+        if marker_style is not None:
+            self._validate_and_set_marker_style(marker_style)
 
         self._marktags.add(marker_name)
 
