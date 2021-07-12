@@ -10,7 +10,7 @@ from astropy.utils.exceptions import AstropyDeprecationWarning
 
 from ginga.ColorDist import ColorDistBase
 
-from astrowidgets.core import ImageWidget, ALLOWED_CURSOR_LOCATIONS
+from astrowidgets.ginga import ImageWidget, ALLOWED_CURSOR_LOCATIONS
 from astrowidgets.interface_definition import ImageViewerInterface
 
 

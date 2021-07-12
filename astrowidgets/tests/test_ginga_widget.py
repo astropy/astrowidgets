@@ -7,7 +7,7 @@ from astropy.wcs import WCS
 from astropy.nddata import CCDData
 from astropy.coordinates import SkyCoord
 
-from ..core import ImageWidget, RESERVED_MARKER_SET_NAMES
+from ..ginga import ImageWidget, RESERVED_MARKER_SET_NAMES
 
 
 def _make_fake_ccd(with_wcs=True):
