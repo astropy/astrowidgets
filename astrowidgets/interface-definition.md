@@ -24,6 +24,7 @@ Unless otherwise noted, all are settable.
 1. `stretch` -- current image stretch. **DISCUSSION topic:** What are the values allowed here? String (e.g. `sqrt`) or astropy stretch object or either?
 1. `autocut_options` -- list of options for auto-cutting the data. **DISCUSSION topic:** Is this a list of strings? Astropy stretch objects? Something else? **DISCUSSION topic:** Should these be called intervals or should the documentation of it at least mention that they are called intervals in the astropy documentation?
 1. `cuts` -- current cuts. **DISCUSSION topic:** What are the values allowed here? `tuple` (e.g. `(2, 1000)`) or astropy interval object or either?
+1. `colormap_options` -- list of the colormap options, as strings.
 1. `cursor` -- location of cursor display. One of `top` or `bottom` or `None`.
 1. `click_center` -- if `True`, clicking on image re-centers image on that location.
 1. `click_drag` -- if `True`, pan the image by clicking and dragging.
@@ -37,6 +38,7 @@ Unless otherwise noted, all are settable.
 1. `center_on(self, point)` -- center the viewer on `point` which may be a pixel or a `SkyCoord`.
 1. `offset_by(self, dx, dy)` -- amount by which to offset the viewer. After applying the offset, the new center is (old center 1. offset). `dx` and `dy` can be either pixels or an angle quantity. **DISCUSSION item:** Why separate dx, dy instead of a point?
 1. `zoom(self, value)` -- factor by which to zoom in or out, i.e. the factor by which to change `zoom_level` from its current value. **DISCUSSION item:** Would `zoom_by` or `change_zoom_by` be a better name?
+1. `set_colormap(self, cmap)` -- set the colormap
 1. `start_marking(self, marker_name=None, marker_style=None)` -- activate marking mode with option name and/or style for the markers. *Note:* Keyword argument name change to `marker_style` proposed in #145.
 1. `stop_marking(self, clear_markers=False)` -- deactivate marking mode, optionally clearing the markers away.
 1. `get_marker_names(self)` -- get list of the marker names currently in use.
