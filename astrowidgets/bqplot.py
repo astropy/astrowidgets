@@ -487,7 +487,7 @@ class ImageWidget(ipw.VBox):
     # Methods for loading data
     def load_fits(self, file_name_or_HDU):
         if isinstance(file_name_or_HDU, str):
-            ccd = CCDData.read(file)
+            ccd = CCDData.read(file_name_or_HDU)
         elif isinstance(file_name_or_HDU,
                         (fits.ImageHDU, fits.CompImageHDU, fits.PrimaryHDU)):
             try:
