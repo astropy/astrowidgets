@@ -149,9 +149,11 @@ class _AstroImage(ipw.VBox):
 
         # Set the image data and map it to the bqplot figure so that
         # cursor location corresponds to the underlying array index.
+        # The offset follows the convention that the index corresponds
+        # to the center of the pixel.
         self._image.image = image_data
-        self._image.x = [0, self._image_shape[1]]
-        self._image.y = [0, self._image_shape[0]]
+        self._image.x = [-0.5, self._image_shape[1] - 0.5]
+        self._image.y = [-0.5, self._image_shape[0] - 0.5]
 
     @property
     def center(self):
