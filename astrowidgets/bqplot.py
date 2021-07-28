@@ -511,7 +511,7 @@ class ImageWidget(ipw.VBox):
             else:
                 self._interval = cuts
         if self._data is not None:
-            self._send_data()
+            self._send_data(reset_view=False)
 
     @trait.observe('zoom_level')
     def _update_zoom_level(self, change):
