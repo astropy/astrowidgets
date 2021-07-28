@@ -6,6 +6,7 @@ from astropy.nddata import CCDData
 from astropy.table import Table, vstack
 from astropy import units as u
 import astropy.visualization as apviz
+from astropy.wcs import WCS
 
 from bqplot import Figure, LinearScale, Axis, ColorScale, PanZoom, ScatterGL
 from bqplot_image_gl import ImageGL
@@ -176,6 +177,10 @@ class _AstroImage(ipw.VBox):
         self._scales['x'].min = x_c - width_x / 2
         self._scales['y'].max = y_c + width_y / 2
         self._scales['y'].min = y_c - width_y / 2
+
+    @property
+    def interaction(self):
+        return self._figure.interaction
 
     def set_color(self, colors):
         # colors here means a list of hex colors
@@ -364,12 +369,64 @@ class ImageWidget(ipw.VBox):
                                      viewer_aspect_ratio=viewer_aspect)
         self._interval = None
         self._stretch = None
-        self._colormap = 'Grays'
+        self.set_colormap('Greys_r')
         self._marker_table = MarkerTableManager()
         self._data = None
         self._wcs = None
         self._is_marking = False
+
         self.marker = {'color': 'red', 'radius': 20, 'type': 'square'}
+        self.cuts = apviz.AsymmetricPercentileInterval(1, 99)
+
+        self._cursor = ipw.HTML('Coordinates show up here')
+        self._init_mouse_callbacks()
+        self.children = [self._astro_im, self._cursor]
+
+    def _init_mouse_callbacks(self):
+
+        def on_mouse_message(interaction, event_data, buffers):
+            """
+            This function simply detects the event type then dispatches
+            to the method that handles that event.
+
+            The ``event_data`` contains all of the information we need.
+            """
+            if event_data['event'] == 'mousemove':
+                self._mouse_move(event_data)
+
+        self._astro_im.interaction.on_msg(on_mouse_message)
+
+    def _mouse_move(self, event_data):
+        if self._data is None:
+            # Nothing to display, so exit
+            return
+
+        xc = event_data['domain']['x']
+        yc = event_data['domain']['y']
+
+        # get the array indices into the data so that we can get data values
+        x_index = int(np.trunc(xc + 0.5))
+        y_index = int(np.trunc(yc + 0.5))
+
+        # Check that the index is in the array.
+        in_image = (self._data.shape[1] > x_index >= 0) and (self._data.shape[0] > y_index >= 0)
+        if in_image:
+            val = self._data[y_index, x_index]
+        else:
+            val = None
+
+        if val is not None:
+            value = f'value: {val:8.3f}'
+        else:
+            value = 'value: N/A'
+
+        pixel_location = f'X:  {xc:.2f}  Y:  {yc:.2f}'
+        if self._wcs is not None:
+            sky = self._wcs.pixel_to_world(xc, yc)
+            ra_dec = f'RA: {sky.icrs.ra:3.7f} Dec: {sky.icrs.dec:3.7f}'
+        else:
+            ra_dec = ''
+        self._cursor.value = ', '.join([pixel_location, ra_dec, value])
 
     def _interval_and_stretch(self):
         """
