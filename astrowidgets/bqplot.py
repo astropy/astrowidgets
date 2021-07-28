@@ -59,7 +59,7 @@ class _AstroImage(ipw.VBox):
         axis_x = Axis(scale=scale_x, visible=False)
         axis_y = Axis(scale=scale_y, orientation='vertical', visible=False)
         scales_image = {'x': scale_x, 'y': scale_y,
-                        'image': ColorScale(max=1.114, min=2902,
+                        'image': ColorScale(max=1, min=0,
                                             scheme='Greys')}
 
         self._scatter_marks = {}
@@ -351,7 +351,8 @@ class ImageWidget(ipw.VBox):
     image_height = trait.Int(help="Height of the image (not viewer)").tag(sync=True)
     zoom_level = trait.Float(help="Current zoom of the view").tag(sync=True)
     marker = trait.Any(help="Markers").tag(sync=True)
-    cuts = trait.Any(help="Cut levels", allow_none=True).tag(sync=True)
+    cuts = trait.Any(help="Cut levels", allow_none=True).tag(sync=False)
+
     stretch = trait.Unicode(help='Stretch algorithm name', allow_none=True).tag(sync=True)
 
     def __init__(self, *args, image_width=500, image_height=500):
@@ -385,9 +386,9 @@ class ImageWidget(ipw.VBox):
 
         return stretched
 
-    def _send_data(self):
+    def _send_data(self, reset_view=True):
         self._astro_im.set_data(self._interval_and_stretch(),
-                                reset_view=False)
+                                reset_view=reset_view)
 
     def _get_interval(self):
         if self._interval is None:
@@ -452,6 +453,8 @@ class ImageWidget(ipw.VBox):
                 self._interval = apviz.ManualInterval(*cuts)
             else:
                 self._interval = cuts
+        if self._data is not None:
+            self._send_data()
 
     @trait.observe('zoom_level')
     def _update_zoom_level(self, change):
@@ -481,11 +484,10 @@ class ImageWidget(ipw.VBox):
         raise NotImplementedError('😭 sorry, cannot do that yet')
         self._astro_im.set_scroll_zoom(change['new'])
 
-
     # The methods, grouped loosely by purpose
 
     # Methods for loading data
-    def load_fits(self, file_name_or_HDU):
+    def load_fits(self, file_name_or_HDU, reset_view=True):
         if isinstance(file_name_or_HDU, str):
             ccd = CCDData.read(file_name_or_HDU)
         elif isinstance(file_name_or_HDU,
@@ -504,16 +506,20 @@ class ImageWidget(ipw.VBox):
         self._ccd = ccd
         self._data = ccd.data
         self._wcs = ccd.wcs
-        self._send_data()
+        self._send_data(reset_view=reset_view)
 
-    def load_array(self, array):
+    def load_array(self, array, reset_view=True):
         self._data = array
-        self._send_data()
+        self._send_data(reset_view=reset_view)
 
-    def load_nddata(self, data):
+    def load_nddata(self, data, reset_view=True):
         self._ccd = data
         self._data = self._ccd.data
-        self._send_data()
+        self._wcs = data.wcs
+        if self._wcs is None:
+            self._wcs = WCS(self._ccd.meta)
+
+        self._send_data(reset_view=reset_view)
 
     # Saving contents of the view and accessing the view
     def save(self, filename):
