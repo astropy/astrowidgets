@@ -819,9 +819,6 @@ class ImageWidget(ipyw.VBox):
     # TODO: Possible to use astropy.visualization directly?
     @stretch.setter
     def stretch(self, val):
-        valid_vals = self.stretch_options
-        if val not in valid_vals:
-            raise ValueError('Value must be one of: {}'.format(valid_vals))
         self._viewer.set_color_algorithm(val)
 
     @property
