@@ -25,7 +25,6 @@ class ImageWidgetAPITest:
         self.image.image_height = height
         assert self.image.image_width == width
         assert self.image.image_height == height
-        assert self.image.viewer.get_window_size() == (width, height)
 
     def test_load_fits(self):
         hdu = fits.PrimaryHDU(data=self.data)
