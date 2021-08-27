@@ -484,7 +484,7 @@ class ImageWidget(ipw.VBox):
         proposed_cuts = proposal['value']
 
         bad_value_error = (f"{proposed_cuts} is not a valid value. "
-                           "cuts must be either None, "
+                           "cuts must be one of None, "
                            "an astropy interval, or list/tuple "
                            "of length 2.")
 
