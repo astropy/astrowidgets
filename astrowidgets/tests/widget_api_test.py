@@ -232,7 +232,7 @@ class ImageWidgetAPITest:
         # If is_marking is true then trying to enable click_drag should fail
         self.image._is_marking = True
         self.image.click_drag = False
-        with pytest.raises(ValueError, match='Interactive marking'):
+        with pytest.raises(ValueError, match='[Ii]nteractive marking'):
             self.image.click_drag = True
         self.image._is_marking = False
 
