@@ -407,8 +407,8 @@ class ImageWidget(ipw.VBox):
         yc = event_data['domain']['y']
 
         # get the array indices into the data so that we can get data values
-        x_index = int(np.trunc(xc + 0.5))
-        y_index = int(np.trunc(yc + 0.5))
+        x_index = int(np.floor(xc + 0.5))
+        y_index = int(np.floor(yc + 0.5))
 
         # Check that the index is in the array.
         in_image = (self._data.shape[1] > x_index >= 0) and (self._data.shape[0] > y_index >= 0)
