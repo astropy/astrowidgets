@@ -11,29 +11,28 @@ import functools
 import os
 import warnings
 
+import ipywidgets as ipyw
 import numpy as np
 from astropy.coordinates import SkyCoord
 from astropy.io import fits
-from astropy.table import Table
+from astropy.table import Table, vstack
 
 from ginga.AstroImage import AstroImage
 from ginga.canvas.CanvasObject import drawCatalog
 from ginga.web.jupyterw.ImageViewJpw import EnhancedCanvasView
 from ginga.util.wcs import ra_deg_to_str, dec_deg_to_str
 
-from astrowidgets.core import BaseImageWidget
-
 __all__ = ['ImageWidget']
 
 
-class ImageWidget(BaseImageWidget):
+class ImageWidget(ipyw.VBox):
     """Image widget for Jupyter notebook using Ginga viewer.
 
     .. todo:: Any property passed to constructor has to be valid keyword.
 
     Parameters
     ----------
-    logger : obj
+    logger : obj or None
         Ginga logger. For example::
 
             from ginga.misc.log import get_logger
@@ -47,15 +46,69 @@ class ImageWidget(BaseImageWidget):
     def __init__(self, logger=None, image_width=500, image_height=500,
                  **kwargs):
         super().__init__()
-
         if 'use_opencv' in kwargs:
             warnings.warn("use_opencv kwarg has been deprecated--"
                           "opencv will be used if it is installed",
                           DeprecationWarning)
 
         self._viewer = EnhancedCanvasView(logger=logger)
+               self.ALLOWED_CURSOR_LOCATIONS = ['top', 'bottom', None]
+        self.RESERVED_MARKER_SET_NAMES = ['all']
+
+        if image_widget is None:
+            self._jup_img = ipyw.Image(format='jpeg')
+        else:
+            self._jup_img = image_widget
+
+        if cursor_widget is None:
+            self._jup_coord = ipyw.HTML('Coordinates show up here')
+        else:
+            self._jup_coord = cursor_widget
+
+        if isinstance(self._jup_img, ipyw.Image):
+            # Set the image margin on all sides.
+            self._jup_img.layout.margin = '0'
+
+            # Set both of those to ensure consistent display in notebook
+            # and jupyterlab when the image is put into a container smaller
+            # than the image.
+            self._jup_img.max_width = '100%'
+            self._jup_img.height = 'auto'
 
         self._pixel_offset = pixel_coords_offset
+
+        # Set the width of the box containing the image to the desired width
+        # Note: We are NOT setting the height. That is because the height
+        # is automatically set by the image aspect ratio.
+        self.layout.width = str(image_width)
+
+        # Make sure all of the internal state trackers have a value
+        # and start in a state which is definitely allowed: all are
+        # False.
+        self._is_marking = False
+        self._click_center = False
+        self._click_drag = False
+        self._scroll_pan = False
+        self._cached_state = {}
+
+        # Marker
+        self._marker_dict = {}
+        self._marker = None
+        # Maintain marker tags as a set because we do not want
+        # duplicate names.
+        self._marktags = set()
+        # Let's have a default name for the tag too:
+        self._default_mark_tag_name = 'default-marker-name'
+        self._interactive_marker_set_name_default = 'interactive-markers'
+        self._interactive_marker_set_name = self._interactive_marker_set_name_default
+
+        # Define a callback that shows the output of a print
+        self.print_out = ipyw.Output()
+
+        self._cursor = 'bottom'
+        self.children = [self._jup_img, self._jup_coord]
+
+
 
         # These need to also be set for now.
         # Ginga uses them to figure out what size image to make.
@@ -103,7 +156,8 @@ class ImageWidget(BaseImageWidget):
     # Need this here because we need to overwrite the setter.
     @property
     def image_width(self):
-        return super().image_width
+        """Width of image widget."""
+        return int(self._jup_img.width)
 
     @image_width.setter
     def image_width(self, value):
@@ -115,7 +169,8 @@ class ImageWidget(BaseImageWidget):
     # Need this here because we need to overwrite the setter.
     @property
     def image_height(self):
-        return super().image_height
+        """Height of image widget."""
+        return int(self._jup_img.height)
 
     @image_height.setter
     def image_height(self, value):
@@ -276,10 +331,14 @@ class ImageWidget(BaseImageWidget):
 
     @property
     def zoom_level(self):
-        return self._viewer.get_scale()
+        """Zoom level (settable):
 
-    zoom_level.__doc__ = (BaseImageWidget.zoom_level.__doc__
-                          + "``'fit'`` means zoom to fit")
+        * 1 means real-pixel-size.
+        * 2 means zoomed in by a factor of 2.
+        * 0.5 means zoomed out by a factor of 2.
+        * ``fit`` means fit the image to the viewer.
+        """
+        return self._viewer.get_scale()
 
     @zoom_level.setter
     def zoom_level(self, value):
@@ -287,6 +346,78 @@ class ImageWidget(BaseImageWidget):
             self._viewer.zoom_fit()
         else:
             self._viewer.scale_to(value, value)
+
+
+    def zoom(self, value):
+        """Zoom in or out by the given factor.
+
+        Parameters
+        ----------
+        value : int
+            The zoom level to zoom the image.
+            See `zoom_level`.
+
+        """
+        self.zoom_level = self.zoom_level * value
+
+    @property
+    def is_marking(self):
+        """`True` if in marking mode, `False` otherwise.
+        Marking mode means a mouse click adds a new marker.
+        This does not affect :meth:`add_markers`.
+
+        """
+        return self._is_marking
+
+    def start_marking(self, marker_name=None, marker=None):
+        """Start marking, with option to name this set of markers or
+        to specify the marker style.
+
+        This disables `click_center` and `click_drag`, but enables `scroll_pan`.
+
+        Parameters
+        ----------
+        marker_name : str or `None`, optional
+            Marker name to use. This is useful if you want to set different
+            groups of markers. If given, this cannot be already defined in
+            ``RESERVED_MARKER_SET_NAMES`` attribute. If not given, an internal
+            default is used.
+
+        marker : dict or `None`, optional
+            Set the marker properties; see `marker`. If not given, the current
+            setting is used.
+
+        """
+        self.set_cached_state()
+        self.click_center = False
+        self.click_drag = False
+        self.scroll_pan = True  # Set this to ensure there is a mouse way to pan
+        self._is_marking = True
+        if marker_name is not None:
+            self.validate_marker_name(marker_name)
+            self._interactive_marker_set_name = marker_name
+            self._marktags.add(marker_name)
+        else:
+            self._interactive_marker_set_name = self._interactive_marker_set_name_default
+        if marker is not None:
+            self.marker = marker
+
+    def stop_marking(self, clear_markers=False):
+        """Stop marking mode, with option to clear all markers, if desired.
+
+        Parameters
+        ----------
+        clear_markers : bool, optional
+            If `False`, existing markers are retained until
+            :meth:`remove_all_markers` is called.
+            Otherwise, they are all erased.
+
+        """
+        if self.is_marking:
+            self._is_marking = False
+            self.restore_and_clear_cached_state()
+            if clear_markers:
+                self.remove_all_markers()
 
     @property
     def marker(self):
@@ -306,7 +437,7 @@ class ImageWidget(BaseImageWidget):
         # what we expect the user to provide.
         #
         # That makes things like self.marker = self.marker work.
-        return super().marker
+        return self._marker_dict
 
     @marker.setter
     def marker(self, value):
@@ -327,6 +458,17 @@ class ImageWidget(BaseImageWidget):
             raise NotImplementedError(f'Marker type "{marker_type}" not supported')
         # Only set this once we have successfully created a marker
         self._marker_dict = value
+
+    def get_marker_names(self):
+        """Return a list of used marker names.
+
+        Returns
+        -------
+        names : list of str
+            Sorted list of marker names.
+
+        """
+        return sorted(self._marktags)
 
     def get_markers_by_name(self, marker_name, x_colname='x', y_colname='y',
                             skycoord_colname='coord'):
@@ -401,6 +543,45 @@ class ImageWidget(BaseImageWidget):
         # Either way, add the marker names
         markers_table['marker name'] = marker_name
         return markers_table
+
+
+    def get_all_markers(self, x_colname='x', y_colname='y', skycoord_colname='coord'):
+        """Run :meth:`get_markers_by_name` for all markers."""
+
+        # If it wasn't for the fact that SkyCoord columns can't
+        # be stacked this would all fit nicely into a list
+        # comprehension. But they can't, so we delete the
+        # SkyCoord column if it is present, then add it
+        # back after we have stacked.
+        coordinates = []
+        tables = []
+        for name in self._marktags:
+            table = self.get_markers_by_name(
+                name, x_colname=x_colname, y_colname=y_colname,
+                skycoord_colname=skycoord_colname)
+            if table is None:
+                continue  # No markers by this name, skip it
+
+            if skycoord_colname in table.colnames:
+                coordinates.extend(c for c in table[skycoord_colname])
+                del table[skycoord_colname]
+
+            tables.append(table)
+
+        if len(tables) == 0:
+            return None
+
+        stacked = vstack(tables, join_type='exact')
+
+        if coordinates:
+            n_rows = len(stacked)
+            n_coo = len(coordinates)
+            if n_coo != n_rows:  # This guards against Table auto-broadcast
+                raise ValueError(f'Expects {n_rows} coordinates but found {n_coo},'
+                                 'some markers may be corrupted')
+            stacked[skycoord_colname] = SkyCoord(coordinates)
+
+        return stacked
 
     # TODO: Resolve https://github.com/ejeschke/ginga/issues/672
     # TODO: Later enhancements to include more columns to control
@@ -486,6 +667,60 @@ class ImageWidget(BaseImageWidget):
         else:
             self._marktags.remove(marker_name)
 
+    def remove_all_markers(self):
+        """Delete all markers using :meth:`remove_markers_by_name`."""
+        # Grab the entire list of marker names before iterating
+        # otherwise what we are iterating over changes.
+        for marker_name in self.get_marker_names():
+            self.remove_markers_by_name(marker_name)
+
+    def validate_marker_name(self, marker_name):
+        """Validate a given marker name.
+
+        Parameters
+        ----------
+        marker_name : str
+            Marker name to validate.
+
+        Raises
+        ------
+        ValueError
+            It is not allowed because the name is already defined in the
+            ``RESERVED_MARKER_SET_NAMES`` attribute.
+
+        """
+        if marker_name in self.RESERVED_MARKER_SET_NAMES:
+            raise ValueError(
+                f"The marker name {marker_name} is not allowed. Any name is "
+                f"allowed except these: {', '.join(self.RESERVED_MARKER_SET_NAMES)}")
+
+    def set_cached_state(self):
+        """Cache the following attributes before modifying their states:
+
+        * ``click_center``
+        * ``click_drag``
+        * ``scroll_pan``
+
+        This is used in :meth:`start_marking`, for example.
+        """
+        self._cached_state = dict(click_center=self.click_center,
+                                  click_drag=self.click_drag,
+                                  scroll_pan=self.scroll_pan)
+
+    def restore_and_clear_cached_state(self):
+        """Restore the following attributes with their cached states:
+
+        * ``click_center``
+        * ``click_drag``
+        * ``scroll_pan``
+
+        Then, clear the cache. This is used in :meth:`stop_marking`, for example.
+        """
+        self.click_center = self._cached_state['click_center']
+        self.click_drag = self._cached_state['click_drag']
+        self.scroll_pan = self._cached_state['scroll_pan']
+        self._cached_state = {}
+
     @property
     def stretch_options(self):
         return self._viewer.get_color_algorithms()
@@ -534,10 +769,85 @@ class ImageWidget(BaseImageWidget):
     def set_colormap(self, cmap):
         self._viewer.set_color_map(cmap)
 
+    @property
+    def cursor(self):
+        """Current cursor information panel placement.
+
+        Information must include the following:
+
+        * X and Y cursor positions, depending on `pixel_offset`.
+        * RA and Dec sky coordinates in HMS-DMS format, if available.
+        * Value of the image under the cursor.
+
+        You can set it to one of the following:
+
+        * ``'top'`` places it above the image display.
+        * ``'bottom'`` places it below the image display.
+        * `None` hides it.
+
+        """
+        return self._cursor
+
+    # NOTE: Subclass must re-implement if self._jup_coord is not ipyw.HTML
+    #       or if self.ALLOWED_CURSOR_LOCATIONS is customized.
+    @cursor.setter
+    def cursor(self, value):
+        if value is None:
+            self._jup_coord.layout.visibility = 'hidden'
+            self._jup_coord.layout.display = 'none'
+        elif value in ('top', 'bottom'):
+            self._jup_coord.layout.visibility = 'visible'
+            self._jup_coord.layout.display = 'flex'
+            if value == 'top':
+                self.layout.flex_flow = 'column-reverse'
+            else:
+                self.layout.flex_flow = 'column'
+        else:
+            raise ValueError(
+                f'Invalid value {value} for cursor. '
+                f'Valid values are: {self.ALLOWED_CURSOR_LOCATIONS}')
+        self._cursor = value
+
+    @property
+
+    def click_center(self):
+        """When `True`, mouse left-click can be used to center an image.
+        Otherwise, that interaction is disabled.
+
+        You can set this property to `True` or `False`.
+        This cannot be set to `True` when `is_marking` is also `True`.
+        Setting this to `True` also disables `click_drag`.
+
+        .. note:: In the future, this might accept non-bool values but not currently.
+
+        """
+        return self._click_center
+
+    @click_center.setter
+    def click_center(self, value):
+        if not isinstance(value, bool):
+            raise ValueError('Must be True or False')
+        elif self.is_marking and value:
+            raise ValueError('Interactive marking is in progress. Call '
+                             'stop_marking() to end marking before setting '
+                             'click_center')
+        if value:
+            self.click_drag = False
+
+        self._click_center = value
+
     # Need this here because we need to overwrite the setter.
     @property
     def click_drag(self):
-        return super().click_drag
+        """When `True`, the "click-and-drag" mode is an available interaction
+        for panning. Otherwise, that interaction is disabled.
+
+        You can set this property to `True` or `False`.
+        This cannot be set to `True` when `is_marking` is also `True`.
+        Setting this to `True` also disables `click_center`.
+
+        """
+        return self._click_drag
 
     @click_drag.setter
     def click_drag(self, value):
@@ -559,7 +869,13 @@ class ImageWidget(BaseImageWidget):
     # Need this here because we need to overwrite the setter.
     @property
     def scroll_pan(self):
-        return super().scroll_pan
+        """When `True`, scrolling moves around (pans up/down) in the image.
+        Otherwise, that interaction is disabled and becomes zoom.
+
+        You can set this property to `True` or `False`.
+
+        """
+        return self._scroll_pan
 
     @scroll_pan.setter
     def scroll_pan(self, value):
