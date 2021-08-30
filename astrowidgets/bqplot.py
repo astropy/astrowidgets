@@ -188,10 +188,17 @@ class _AstroImage(ipw.VBox):
         # colors here means a list of hex colors
         self._image.scales['image'].colors = colors
 
-    def save_png(self, filename):
+    def _check_file_exists(self, filename, overwrite=False):
+        if Path(filename).exists() and not overwrite:
+            raise ValueError(f'File named {filename} already exists. Use '
+                             f'overwrite=True to overwrite it.')
+
+    def save_png(self, filename, overwrite=False):
+        self._check_file_exists(filename, overwrite=overwrite)
         self._figure.save_png(filename)
 
-    def save_svg(self, filename):
+    def save_svg(self, filename, overwrite=False):
+        self._check_file_exists(filename, overwrite=overwrite)
         self._figure.save_svg(filename)
 
     def set_pan(self, on_or_off):
@@ -579,14 +586,14 @@ class ImageWidget(ipw.VBox):
         self._send_data(reset_view=reset_view)
 
     # Saving contents of the view and accessing the view
-    def save(self, filename):
+    def save(self, filename, overwrite=False):
         if filename.endswith('.png'):
-            self._astro_im.save_png(filename)
+            self._astro_im.save_png(filename, overwrite=overwrite)
         elif filename.endswith('.svg'):
-            self._astro_im.save_svg(filename)
+            self._astro_im.save_svg(filename, overwrite=overwrite)
         else:
-            raise NotImplementedError('Saving is not implemented for that'
-                                      'file type. Use .png or .svg')
+            raise ValueError('Saving is not supported for that'
+                             'file type. Use .png or .svg')
 
     def set_colormap(self, cmap_name, reverse=False):
         self._astro_im.set_color(bqcolors(cmap_name, reverse=reverse))
