@@ -531,13 +531,16 @@ class ImageWidget(ipw.VBox):
 
         self._astro_im.set_zoom_level(zl)
 
+    def _currently_marking_error_msg(self, caller):
+        return (f'Cannot set {caller} while doing interactive '
+                f'marking. Call the stop_marking() method to '
+                f'stop marking and then set {caller}.')
+
     @trait.validate('click_drag')
     def _validate_click_drag(self, proposal):
         cd = proposal['value']
         if cd and self._is_marking:
-            raise ValueError('Cannot set click_drag while doing interactive '
-                             'marking. Call the stop_marking() method to '
-                             'stop marking and then set click_drag.')
+            raise ValueError(self._currently_marking_error_msg('click_drag'))
         return cd
 
     @trait.observe('click_drag')
@@ -551,6 +554,40 @@ class ImageWidget(ipw.VBox):
     @trait.observe('scroll_pan')
     def _update_viewer_zoom_scroll(self, change):
         self._astro_im.set_scroll_zoom(change['new'])
+
+    @trait.validate('click_center')
+    def _validate_click_center(self, proposal):
+        new = proposal['value']
+        if new and self._is_marking:
+            raise ValueError(self._currently_marking_error_msg('click_center'))
+        return new
+
+    @trait.observe('click_center')
+    def _update_click_center(self, change):
+        if change['new']:
+            # click_center has been turned on, so turn off click_drag
+            self.click_drag = False
+
+    @property
+    def viewer(self):
+        return self._astro_im
+
+    @property
+    def is_marking(self):
+        """`True` if in marking mode, `False` otherwise.
+        Marking mode means a mouse click adds a new marker.
+        This does not affect :meth:`add_markers`.
+
+        """
+        return self._is_marking
+
+    @property
+    def _default_mark_tag_name(self):
+        """
+        This is only here to make a test pass -- it should probably either
+        be part of the API or not tested.
+        """
+        return self._marker_table.default_mark_tag_name
 
     # The methods, grouped loosely by purpose
 
