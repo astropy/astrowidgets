@@ -550,7 +550,6 @@ class ImageWidget(ipw.VBox):
 
     @trait.observe('scroll_pan')
     def _update_viewer_zoom_scroll(self, change):
-        raise NotImplementedError('😭 sorry, cannot do that yet')
         self._astro_im.set_scroll_zoom(change['new'])
 
     # The methods, grouped loosely by purpose
