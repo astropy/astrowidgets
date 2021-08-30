@@ -501,7 +501,10 @@ class ImageWidget(ipw.VBox):
         else:
             try:
                 length = len(proposed_cuts)
-                assert length == 2
+                if length != 2:
+                    raise ValueError('Cut levels must be given as (low, high).'
+                                        + bad_value_error)
+
                 # Tests expect this to be a tuple...
                 proposed_cuts = tuple(proposed_cuts)
             except (TypeError, AssertionError):
