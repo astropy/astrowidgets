@@ -366,11 +366,16 @@ class ImageWidget(ipw.VBox):
     zoom_level = trait.Float(help="Current zoom of the view").tag(sync=True)
     marker = trait.Any(help="Markers").tag(sync=True)
     cuts = trait.Any(help="Cut levels", allow_none=True).tag(sync=False)
-
+    cursor = trait.Enum(ALLOWED_CURSOR_LOCATIONS, default_value='bottom',
+                        help='Whether and where to display cursor position').tag(sync=True)
     stretch = trait.Unicode(help='Stretch algorithm name', allow_none=True).tag(sync=True)
+
+    # Leave this in since the API seems to call for it
+    ALLOWED_CURSOR_LOCATIONS = ALLOWED_CURSOR_LOCATIONS
 
     def __init__(self, *args, image_width=500, image_height=500):
         super().__init__(*args)
+        self.RESERVED_MARKER_SET_NAMES = ['all']
         self.image_width = image_width
         self.image_height = image_height
         viewer_aspect = self.image_width / self.image_height
@@ -388,6 +393,7 @@ class ImageWidget(ipw.VBox):
         self.cuts = apviz.AsymmetricPercentileInterval(1, 99)
 
         self._cursor = ipw.HTML('Coordinates show up here')
+
         self._init_mouse_callbacks()
         self.children = [self._astro_im, self._cursor]
 
