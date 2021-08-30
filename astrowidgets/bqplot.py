@@ -575,8 +575,6 @@ class ImageWidget(ipw.VBox):
         self._ccd = data
         self._data = self._ccd.data
         self._wcs = data.wcs
-        if self._wcs is None:
-            self._wcs = WCS(self._ccd.meta)
 
         self._send_data(reset_view=reset_view)
 
