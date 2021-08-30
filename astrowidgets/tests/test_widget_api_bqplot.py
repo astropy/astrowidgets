@@ -1,5 +1,7 @@
 import pytest
 
+from traitlets import TraitError
+
 from .widget_api_test import ImageWidgetAPITest
 
 _ = pytest.importorskip("bqplot",
@@ -8,7 +10,11 @@ _ = pytest.importorskip("bqplot",
 from astrowidgets.bqplot import ImageWidget  # noqa: E402
 
 
-class TestGingaWidget(ImageWidgetAPITest):
-       def setup_class(self):
-              self.image_widget_class = ImageWidget
-              super().setup_class(self)
+class TestBQplotWidget(ImageWidgetAPITest):
+    image_widget_class = ImageWidget
+    cursor_error_classes = (ValueError, TraitError)
+
+    @pytest.mark.skip(reason="Saving is done in javascript and requires "
+                             "a running browser.")
+    def test_save(self, tmpdir):
+        pass

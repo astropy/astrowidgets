@@ -9,6 +9,4 @@ from astrowidgets.ginga import ImageWidget  # noqa: E402
 
 
 class TestGingaWidget(ImageWidgetAPITest):
-       def setup_class(self):
-              self.image_widget_class = ImageWidget
-              super().setup_class(self)
+    image_widget_class = ImageWidget

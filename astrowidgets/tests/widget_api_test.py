@@ -7,12 +7,42 @@ import numpy as np  # noqa: E402
 from astropy.io import fits  # noqa: E402
 from astropy.nddata import NDData  # noqa: E402
 from astropy.table import Table, vstack  # noqa: E402
+from astropy import units as u  # noqa: E402
+from astropy.wcs import WCS  # noqa: E402
 
 
 class ImageWidgetAPITest:
-    def setup_class(self):
+    cursor_error_classes = (ValueError)
+
+    @pytest.fixture
+    def data(self):
         rng = np.random.default_rng(1234)
-        self.data = rng.random((100, 100))
+        return rng.random((100, 100))
+
+    @pytest.fixture
+    def wcs(self):
+        # This is a copy/paste from the astropy 4.3.1 documentation...
+
+        # Create a new WCS object.  The number of axes must be set
+        # from the start
+        w = WCS(naxis=2)
+
+        # Set up an "Airy's zenithal" projection
+        w.wcs.crpix = [-234.75, 8.3393]
+        w.wcs.cdelt = np.array([-0.066667, 0.066667])
+        w.wcs.crval = [0, -90]
+        w.wcs.ctype = ["RA---AIR", "DEC--AIR"]
+        w.wcs.set_pv([(2, 1, 45.0)])
+        return w
+
+    # This setup is run before each test, ensuring that there are no
+    # side effects of one test on another
+    @pytest.fixture(autouse=True)
+    def setup(self):
+        """
+        Subclasses MUST define ``image_widget_class`` -- doing so as a
+        class variable does the trick.
+        """
         self.image = self.image_widget_class(image_width=250, image_height=100)
 
     def test_width_height(self):
@@ -26,22 +56,34 @@ class ImageWidgetAPITest:
         assert self.image.image_width == width
         assert self.image.image_height == height
 
-    def test_load_fits(self):
-        hdu = fits.PrimaryHDU(data=self.data)
+    def test_load_fits(self, data):
+        hdu = fits.PrimaryHDU(data=data)
         self.image.load_fits(hdu)
 
-    def test_load_nddata(self):
-        nddata = NDData(self.data)
+    def test_load_nddata(self, data):
+        nddata = NDData(data)
         self.image.load_nddata(nddata)
 
-    def test_load_array(self):
-        self.image.load_array(self.data)
+    def test_load_array(self, data):
+        self.image.load_array(data)
 
     def test_center_on(self):
         self.image.center_on((10, 10))  # X, Y
 
-    def test_offset_to(self):
-        self.image.offset_to(10, 10)  # dX, dY
+    def test_offset_by(self, data, wcs):
+        self.image.offset_by(10, 10)  # dX, dY
+
+        # A mix of pixel and sky should produce an error
+        with pytest.raises(ValueError):
+            self.image.offset_by(10 * u.arcmin, 10)
+
+        # Testing offset by WCS requires a WCS. The viewer will (or ought to
+        # have) taken care of setting up the WCS internally if initialized with
+        # an NDData that has a WCS.
+        ndd = NDData(data=data, wcs=wcs)
+        self.image.load_nddata(ndd)
+
+        self.image.offset_by(10 * u.arcmin, 10 * u.arcmin)
 
     def test_zoom_level(self):
         self.image.zoom_level = 5
@@ -188,7 +230,7 @@ class ImageWidgetAPITest:
         # A valid value should change the stretch
         assert self.image.stretch is not original_stretch
 
-    def test_cuts(self):
+    def test_cuts(self, data):
         with pytest.raises(ValueError, match='must be one of'):
             self.image.cuts = 'not a valid value'
 
@@ -197,6 +239,8 @@ class ImageWidgetAPITest:
 
         assert 'histogram' in self.image.autocut_options
 
+        # Setting using histogram requires data
+        self.image.load_array(data)
         self.image.cuts = 'histogram'
         np.testing.assert_allclose(
             self.image.cuts, (3.948844e-04, 9.990224e-01), rtol=1e-6)
@@ -212,7 +256,7 @@ class ImageWidgetAPITest:
 
     def test_cursor(self):
         assert self.image.cursor in self.image.ALLOWED_CURSOR_LOCATIONS
-        with pytest.raises(ValueError):
+        with pytest.raises(self.cursor_error_classes):
             self.image.cursor = 'not a valid option'
         self.image.cursor = 'bottom'
         assert self.image.cursor == 'bottom'
@@ -251,7 +295,7 @@ class ImageWidgetAPITest:
         # If is_marking is true then trying to enable click_center should fail
         self.image._is_marking = True
         self.image.click_center = False
-        with pytest.raises(ValueError, match='Interactive marking'):
+        with pytest.raises(ValueError, match='[Ii]nteractive marking'):
             self.image.click_center = True
         self.image._is_marking = False
 
