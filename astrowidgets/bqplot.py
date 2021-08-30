@@ -24,6 +24,8 @@ from matplotlib.colors import to_hex
 
 import traitlets as trait
 
+from .helpers import _offset_is_pixel_or_sky
+
 # Allowed locations for cursor display
 ALLOWED_CURSOR_LOCATIONS = ['top', 'bottom', None]
 
@@ -776,9 +778,41 @@ class ImageWidget(ipw.VBox):
 
         self._astro_im.center = pixel
 
-    # @abstractmethod
-    # def offset_to(self):
-    #     raise NotImplementedError
+    def offset_by(self, dx, dy):
+        """
+        Move the center to a point that is given offset
+        away from the current center.
+
+        Parameters
+        ----------
+        dx, dy : float or `~astropy.unit.Quantity`
+            Offset value. Without a unit, assumed to be pixel offsets.
+            If a unit is attached, offset by pixel or sky is assumed from
+            the unit.
+
+        """
+        dx_val, dx_coord = _offset_is_pixel_or_sky(dx)
+        dy_val, dy_coord = _offset_is_pixel_or_sky(dy)
+
+        if dx_coord != dy_coord:
+            raise ValueError(f'dx is of type {dx_coord} but '
+                             f'dy is of type {dy_coord}')
+
+        if dx_coord == 'data':
+            x, y = self._astro_im.center
+            self.center_on((x + dx_val, y + dy_val))
+        else:
+            center_coord = self._wcs.pixel_to_world(*self._astro_im.center)
+            # dx and dy in this case have units and we need to pass those units
+            # in to offset.
+
+            offset = SkyOffsetFrame(dx, dy, origin=center_coord.frame)
+            new_center = SkyCoord(offset.transform_to(center_coord))
+
+            # This is so much better only available in 4.3 or higher:
+            # new_center = center_coord.spherical_offsets_by(dx_val, dy_val)
+
+            self.center_on(new_center)
 
     def zoom(self, value):
         self.zoom_level = self.zoom_level * value
