@@ -1,6 +1,9 @@
+from pathlib import Path
+import warnings
+
 import numpy as np
 
-from astropy.coordinates import SkyCoord
+from astropy.coordinates import SkyCoord, SkyOffsetFrame
 from astropy.io import fits
 from astropy.nddata import CCDData
 from astropy.table import Table, vstack
@@ -657,9 +660,17 @@ class ImageWidget(ipw.VBox):
     # def stop_marking(self):
     #     raise NotImplementedError
 
+    def _validate_marker_name(self, marker_name):
+        if marker_name in self.RESERVED_MARKER_SET_NAMES:
+            raise ValueError(
+                f"The marker name {marker_name} is not allowed. Any name is "
+                f"allowed except these: {', '.join(self.RESERVED_MARKER_SET_NAMES)}")
+
     def add_markers(self, table, x_colname='x', y_colname='y',
                     skycoord_colname='coord', use_skycoord=False,
                     marker_name=None):
+
+        self._validate_marker_name(marker_name)
 
         if use_skycoord:
             if self._wcs is None:
@@ -718,13 +729,16 @@ class ImageWidget(ipw.VBox):
 
         return marks
 
+    def get_marker_names(self):
+        return self._marker_table.marker_names
+
     def get_markers_by_name(self, marker_name=None, x_colname='x', y_colname='y',
                             skycoord_colname='coord'):
 
         # We should always allow the default name. The case
         # where that table is empty will be handled in a moment.
         if (marker_name not in self._marker_table.marker_names
-                and marker_name != self.marker_table.default_mark_tag_name):
+                and marker_name != self._marker_table.default_mark_tag_name):
             raise ValueError(f"No markers named '{marker_name}' found.")
 
         marks = self._marker_table.get_markers_by_name(marker_name=marker_name)
@@ -768,3 +782,79 @@ class ImageWidget(ipw.VBox):
 
     def zoom(self, value):
         self.zoom_level = self.zoom_level * value
+
+    def start_marking(self, marker_name=None, marker=None):
+        """Start marking, with option to name this set of markers or
+        to specify the marker style.
+
+        This disables `click_center` and `click_drag`, but enables `scroll_pan`.
+
+        Parameters
+        ----------
+        marker_name : str or `None`, optional
+            Marker name to use. This is useful if you want to set different
+            groups of markers. If given, this cannot be already defined in
+            ``RESERVED_MARKER_SET_NAMES`` attribute. If not given, an internal
+            default is used.
+
+        marker : dict or `None`, optional
+            Set the marker properties; see `marker`. If not given, the current
+            setting is used.
+
+        """
+        self.set_cached_state()
+        self.click_center = False
+        self.click_drag = False
+        self.scroll_pan = True  # Set this to ensure there is a mouse way to pan
+        self._is_marking = True
+        if marker_name is not None:
+            self._validate_marker_name(marker_name)
+            self._interactive_marker_set_name = marker_name
+        else:
+            self._interactive_marker_set_name = self._interactive_marker_set_name_default
+        if marker is not None:
+            self.marker = marker
+
+    def stop_marking(self, clear_markers=False):
+        """Stop marking mode, with option to clear all markers, if desired.
+
+        Parameters
+        ----------
+        clear_markers : bool, optional
+            If `False`, existing markers are retained until
+            :meth:`remove_all_markers` is called.
+            Otherwise, they are all erased.
+
+        """
+        if self.is_marking:
+            self._is_marking = False
+            self.restore_and_clear_cached_state()
+            if clear_markers:
+                self.remove_all_markers()
+
+    def set_cached_state(self):
+        """Cache the following attributes before modifying their states:
+
+        * ``click_center``
+        * ``click_drag``
+        * ``scroll_pan``
+
+        This is used in :meth:`start_marking`, for example.
+        """
+        self._cached_state = dict(click_center=self.click_center,
+                                  click_drag=self.click_drag,
+                                  scroll_pan=self.scroll_pan)
+
+    def restore_and_clear_cached_state(self):
+        """Restore the following attributes with their cached states:
+
+        * ``click_center``
+        * ``click_drag``
+        * ``scroll_pan``
+
+        Then, clear the cache. This is used in :meth:`stop_marking`, for example.
+        """
+        self.click_center = self._cached_state['click_center']
+        self.click_drag = self._cached_state['click_drag']
+        self.scroll_pan = self._cached_state['scroll_pan']
+        self._cached_state = {}
