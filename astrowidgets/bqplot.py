@@ -250,7 +250,7 @@ class _AstroImage(ipw.VBox):
         try:
             del self._scatter_marks[mark_id]
         except KeyError:
-            raise ValueError('Markers {mark_id} are not present.')
+            raise ValueError(f'Markers {mark_id} are not present.')
 
         self._update_marks()
 
@@ -478,9 +478,9 @@ class ImageWidget(ipw.VBox):
             proposed_stretch is not None):
 
             raise ValueError(f'{proposed_stretch} is not a valid value. '
-                                   'The stretch must be None or '
-                                   'one of these values: '
-                                   f'{sorted(STRETCHES.keys())}')
+                              'The stretch must be one of None or '
+                              'one of these values: '
+                             f'{sorted(STRETCHES.keys())}')
 
         return proposed_stretch
 
