@@ -68,6 +68,8 @@ class _AstroImage(ipw.VBox):
                         'image': ColorScale(max=1, min=0,
                                             scheme='Greys')}
 
+        self._image_shape = None
+
         self._scatter_marks = {}
 
         self._figure = Figure(scales=self._scales, axes=[axis_x, axis_y],
@@ -238,6 +240,24 @@ class _AstroImage(ipw.VBox):
         self.set_size(new_width, 'x')
         self._set_scale_aspect_ratio_to_match_viewer('y')
 
+    def get_zoom_level(self):
+        """
+        Get the zoom level of the current view, if such a view has been set.
+
+        A zoom level of 1 means 1 pixel in the image is 1 pixel in the viewer,
+        i.e. the scale width in the horizontal direction matches the width in
+        pixels of the figure.
+        """
+        if self._image_shape is None:
+            return None
+
+        # The width is used here but the height could be used instead
+        # and the result would be the same since the pixels are square.
+        figure_width = float(self._figure.layout.width[:-2])
+        scale_width = self.scale_widths[1]
+
+        return figure_width / scale_width
+
     def plot_named_markers(self, x, y, mark_id, color='yellow',
                            size=100, style='circle'):
         scale_dict = dict(x=self._scales['x'], y=self._scales['y'])
@@ -394,12 +414,21 @@ class ImageWidget(ipw.VBox):
         self._wcs = None
         self._is_marking = False
 
+        # Use this to manage whether or not to send changes in zoom level
+        # to the viewer.
+        self._zoom_source_is_gui = False
+        # Use this to let the method monitoring changes coming from the
+        # image know that the ImageWidget itself is in the process of
+        # updating the zoom.
+        self._updating_zoom = False
+
         self.marker = {'color': 'red', 'radius': 20, 'type': 'square'}
         self.cuts = apviz.AsymmetricPercentileInterval(1, 99)
 
         self._cursor = ipw.HTML('Coordinates show up here')
 
         self._init_mouse_callbacks()
+        self._init_watch_image_changes()
         self.children = [self._astro_im, self._cursor]
 
     def _init_mouse_callbacks(self):
@@ -448,6 +477,39 @@ class ImageWidget(ipw.VBox):
             ra_dec = ''
         self._cursor.value = ', '.join([pixel_location, ra_dec, value])
 
+    def _init_watch_image_changes(self):
+        """
+        Watch for changes to the image scale, which indicate the user
+        has either changed the zoom or has panned, and update the zoom_level.
+        """
+        def update_zoom_level(event):
+            """
+            Watch for changes in the zoom level from the viewer.
+            """
+
+            old_zoom = self.zoom_level
+            new_zoom = self._astro_im.get_zoom_level()
+            if new_zoom is None or self._updating_zoom:
+                # There is no image yet, or this object is in the process
+                # of changing the zoom, so return
+                return
+
+            # Do nothing if the zoom has not changed
+            if np.abs(new_zoom - old_zoom) > 1e-3:
+                # Let the zoom_level handler know the GUI itself
+                # generated this zoom change which means the GUI
+                # does not need to be updated.
+                self._zoom_source_is_gui = True
+                self.zoom_level = new_zoom
+
+        # Observe changes to the maximum of the x scale. Observing the y scale
+        # or the minimum instead of the maximum is also fine.
+        x_scale = self._astro_im._scales['x']
+
+        # THIS IS TERRIBLE AND MAKES THINGS SUPER LAGGY!!!! Needs to be
+        # throttled or something. Look at the ImageGL observe options.
+        x_scale.observe(update_zoom_level, names='max')
+
     def _interval_and_stretch(self):
         """
         Stretch and normalize the data before sending to the viewer.
@@ -466,6 +528,7 @@ class ImageWidget(ipw.VBox):
     def _send_data(self, reset_view=True):
         self._astro_im.set_data(self._interval_and_stretch(),
                                 reset_view=reset_view)
+        self.zoom_level = self._astro_im.get_zoom_level()
 
     def _get_interval(self):
         if self._interval is None:
@@ -539,8 +602,15 @@ class ImageWidget(ipw.VBox):
     @trait.observe('zoom_level')
     def _update_zoom_level(self, change):
         zl = change['new']
-
-        self._astro_im.set_zoom_level(zl)
+        if not self._zoom_source_is_gui:
+            # User has changed the zoom value so update the viewer
+            self._updating_zoom = True
+            self._astro_im.set_zoom_level(zl)
+            self._updating_zoom = False
+        else:
+            # GUI updated the value so do nothing except reset the source
+            # of the event
+            self._zoom_source_is_gui = False
 
     def _currently_marking_error_msg(self, caller):
         return (f'Cannot set {caller} while doing interactive '
