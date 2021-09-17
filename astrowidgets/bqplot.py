@@ -941,11 +941,12 @@ class ImageWidget(ipw.VBox):
         self.click_drag = False
         self.scroll_pan = True  # Set this to ensure there is a mouse way to pan
         self._is_marking = True
+        mt = self._marker_table
         if marker_name is not None:
             self._validate_marker_name(marker_name)
-            self._interactive_marker_set_name = marker_name
+            mt._interactive_marker_set_name = marker_name
         else:
-            self._interactive_marker_set_name = self._interactive_marker_set_name_default
+            mt._interactive_marker_set_name = mt._interactive_marker_set_name_default
         if marker is not None:
             self.marker = marker
 
