@@ -792,10 +792,10 @@ class ImageWidget(ipw.VBox):
         marks = self.get_markers_by_name(marker_name)
 
         self._astro_im.plot_named_markers(marks['x'], marks['y'],
-                                        marker_name,
-                                        color=self.marker['color'],
-                                        size=self.marker['radius']**2,
-                                        style=self.marker['type'])
+                                          marker_name,
+                                          color=self.marker['color'],
+                                          size=self.marker['radius']**2,
+                                          style=self.marker['type'])
 
     def remove_markers_by_name(self, marker_name):
         # Remove from our tracking table

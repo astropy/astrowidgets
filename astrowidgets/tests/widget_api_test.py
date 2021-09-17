@@ -219,6 +219,16 @@ class ImageWidgetAPITest:
             with pytest.raises(ValueError, match='not allowed'):
                 self.image.add_markers(tab, marker_name=name)
 
+
+        # Add markers with no marker name and check we can retrieve them
+        # using the default marker name
+        self.image.add_markers(tab,  x_colname='x', y_colname='y',
+                               skycoord_colname='coord')
+        # Don't care about the order of the marker names so use set instead of
+        # list.
+        assert (set(self.image.get_marker_names()) ==
+                set(['test2', self.image._default_mark_tag_name]))
+
         # Clear markers to not pollute other tests.
         self.image.remove_all_markers()
         assert len(self.image.get_marker_names()) == 0
