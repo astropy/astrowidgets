@@ -567,7 +567,13 @@ class ImageWidget(ipw.VBox):
 
     @trait.observe('stretch')
     def _observe_stretch(self, change):
-        self._stretch = STRETCHES[change['new']] if change['new'] else None
+        if change['new'] == 'histeq':
+            self._stretch = STRETCHES[change['new']](self._data)
+        else:
+            self._stretch = STRETCHES[change['new']]() if change['new'] else None
+
+        if self._stretch is not None and change['new'] != change['old']:
+            self._send_data()
 
     @trait.validate('cuts')
     def _validate_cuts(self, proposal):
