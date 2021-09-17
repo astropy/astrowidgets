@@ -442,6 +442,8 @@ class ImageWidget(ipw.VBox):
             """
             if event_data['event'] == 'mousemove':
                 self._mouse_move(event_data)
+            elif event_data['event'] == 'click':
+                self._mouse_click(event_data)
 
         self._astro_im.interaction.on_msg(on_mouse_message)
 
@@ -471,11 +473,22 @@ class ImageWidget(ipw.VBox):
 
         pixel_location = f'X:  {xc:.2f}  Y:  {yc:.2f}'
         if self._wcs is not None:
-            sky = self._wcs.pixel_to_world(xc, yc)
+            sky = self._wcs.pixel_to_world(yc, xc)
             ra_dec = f'RA: {sky.icrs.ra:3.7f} Dec: {sky.icrs.dec:3.7f}'
         else:
             ra_dec = ''
         self._cursor.value = ', '.join([pixel_location, ra_dec, value])
+
+    def _mouse_click(self, event_data):
+        if self._data is None:
+            # Nothing to display, so exit
+            return
+
+        xc = event_data['domain']['x']
+        yc = event_data['domain']['y']
+
+        if self.click_center:
+            self.center_on((xc, yc))
 
     def _init_watch_image_changes(self):
         """
