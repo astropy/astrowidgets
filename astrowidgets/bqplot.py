@@ -662,6 +662,17 @@ class ImageWidget(ipw.VBox):
             # click_center has been turned on, so turn off click_drag
             self.click_drag = False
 
+    @trait.observe('cursor')
+    def _update_cursor_position(self, change):
+        if change['new'] == 'top':
+            self.layout.flex_flow = 'column-reverse'
+            self._cursor.layout.visibility = 'visible'
+        elif change['new'] == 'bottom':
+            self.layout.flex_flow = 'column'
+            self._cursor.layout.visibility = 'visible'
+        elif change['new'] is None:
+            self._cursor.layout.visibility = 'hidden'
+
     @property
     def viewer(self):
         return self._astro_im
