@@ -490,6 +490,29 @@ class ImageWidget(ipw.VBox):
         if self.click_center:
             self.center_on((xc, yc))
 
+        if self.is_marking:
+            print('marky marking')
+            # Just hand off to the method that actually does the work
+            self._add_new_single_marker(xc, yc)
+
+    def _add_new_single_marker(self, x_mark, y_mark):
+        # We have location of the new marker and should have the name
+        # of the marker tag and the marker style, so just need to update
+        # the table and draw the new maker.
+
+        marker_name = self._marker_table._interactive_marker_set_name
+        # update the marker table
+        self._marker_table.add_markers([x_mark], [y_mark], marker_name=marker_name)
+
+        # First approach: get any current markers by that name, add this one
+        # remove the old ones and draw the new ones.
+        marks = self.get_markers_by_name(marker_name=marker_name)
+        self._astro_im.plot_named_markers(marks['x'], marks['y'],
+                                          marker_name,
+                                          color=self.marker['color'],
+                                          size=self.marker['radius']**2,
+                                          style=self.marker['type'])
+
     def _init_watch_image_changes(self):
         """
         Watch for changes to the image scale, which indicate the user
@@ -771,6 +794,10 @@ class ImageWidget(ipw.VBox):
     def add_markers(self, table, x_colname='x', y_colname='y',
                     skycoord_colname='coord', use_skycoord=False,
                     marker_name=None):
+
+        # Handle the case where marker_name is None
+        if marker_name is None:
+            marker_name = self._marker_table.default_mark_tag_name
 
         self._validate_marker_name(marker_name)
 
