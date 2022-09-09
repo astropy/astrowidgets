@@ -19,7 +19,7 @@ import ipywidgets as ipyw
 from ginga.AstroImage import AstroImage
 from ginga.canvas.CanvasObject import drawCatalog
 from ginga.web.jupyterw.ImageViewJpw import EnhancedCanvasView
-from ginga.util.wcs import raDegToString, decDegToString
+from ginga.util.wcs import ra_deg_to_str, dec_deg_to_str
 
 __all__ = ['ImageWidget']
 
@@ -214,7 +214,7 @@ class ImageWidget(ipyw.VBox):
                 try:
                     ra, dec = image.pixtoradec(data_x, data_y)
                     val += ' (RA: {}, DEC: {})'.format(
-                        raDegToString(ra), decDegToString(dec))
+                        ra_deg_to_str(ra), dec_deg_to_str(dec))
                 except Exception:
                     val += ' (RA, DEC: WCS error)'
 
