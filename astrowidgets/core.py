@@ -238,7 +238,7 @@ class ImageWidget(ipyw.VBox):
 
             # NOTE: By always using CompoundObject, marker handling logic
             # is simplified.
-            obj = self._marker(x=data_x, y=data_y)
+            obj = self._marker(x=data_x, y=data_y, coord='data')
             objs.append(obj)
             viewer.canvas.add(self.dc.CompoundObject(*objs),
                               tag=marker_name)
