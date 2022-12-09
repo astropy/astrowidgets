@@ -8,6 +8,13 @@ on:
     # * is a special character in YAML so you have to quote this string
     - cron: '0 5 * * 5'
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
 jobs:
   pep8:
     runs-on: ubuntu-latest
