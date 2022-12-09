@@ -39,7 +39,7 @@ The following dependencies are needed *in the kernel of execution*
 to use ``astrowidgets`` in either Jupyter Lab or Notebook. They should be installed
 automatically when you install astrowidgets:
 
-* ``python>=3.6``
+* ``python>=3.8``
 * ``numpy``
 * ``astropy``
 * ``ipywidgets>=7.5``
@@ -48,7 +48,7 @@ automatically when you install astrowidgets:
 * ``pillow``
 * ``freetype``
 * ``aggdraw``
-* ``jupyterlab>=1``
+* ``jupyterlab>=3``
 * ``nodejs``
 * ``opencv`` (optional, not installed by default)
 
