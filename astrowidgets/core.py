@@ -814,7 +814,7 @@ class ImageWidget(ipyw.VBox):
         """
         The image stretching algorithm in use.
         """
-        return self._viewer.rgbmap.dist
+        return self._viewer.rgbmap.get_dist()
 
     # TODO: Possible to use astropy.visualization directly?
     @stretch.setter
