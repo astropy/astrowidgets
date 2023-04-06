@@ -48,11 +48,6 @@ class ImageWidget(ipyw.VBox):
     image_width, image_height : int
         Dimension of Jupyter notebook's image widget.
 
-    use_opencv : bool
-        Let Ginga use ``opencv`` to speed up image transformation;
-        e.g., rotation and mosaic. If this is enabled and you
-        do not have ``opencv``, you will get a warning.
-
     pixel_coords_offset : int, optional
         An offset, typically either 0 or 1, to add/subtract to all
         pixel values when going to/from the displayed image.
@@ -62,16 +57,13 @@ class ImageWidget(ipyw.VBox):
     """
 
     def __init__(self, logger=None, image_width=500, image_height=500,
-                 use_opencv=True, pixel_coords_offset=0):
+                 pixel_coords_offset=0, **kwargs):
         super().__init__()
 
-        # TODO: Is this the best place for this?
-        if use_opencv:
-            try:
-                from ginga import trcalc
-                trcalc.use('opencv')
-            except ImportError:
-                warnings.warn('install opencv or set use_opencv=False')
+        if 'use_opencv' in kwargs:
+            warnings.warn("use_opencv kwarg has been deprecated--"
+                          "opencv will be used if it is installed",
+                          DeprecationWarning)
 
         self._viewer = EnhancedCanvasView(logger=logger)
 
