@@ -1,6 +1,12 @@
 from typing import Protocol, runtime_checkable, Any
 from abc import abstractmethod
 
+# Allowed locations for cursor display
+ALLOWED_CURSOR_LOCATIONS = ['top', 'bottom', None]
+
+# List of marker names that are for internal use only
+RESERVED_MARKER_SET_NAMES = ['all']
+
 
 @runtime_checkable
 class ImageViewerInterface(Protocol):
