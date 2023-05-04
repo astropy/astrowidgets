@@ -2,6 +2,8 @@ import numpy as np
 
 import pytest
 
+from traitlets.traitlets import TraitError
+
 from astropy.io import fits
 from astropy.nddata import NDData
 from astropy.table import Table
@@ -43,11 +45,11 @@ def test_center_on():
     image.center_on((x, y))
 
 
-def test_offset_to():
+def test_offset_by():
     image = ImageWidget()
     dx = 10
     dy = 10
-    image.offset_to(dx, dy)
+    image.offset_by(dx, dy)
 
 
 def test_zoom_level():
@@ -72,7 +74,7 @@ def test_select_points():
 
 def test_get_selection():
     image = ImageWidget()
-    marks = image.get_markers()
+    marks = image.get_all_markers()
     assert isinstance(marks, Table) or marks is None
 
 
@@ -80,7 +82,7 @@ def test_stop_marking():
     image = ImageWidget()
     # This is not much of a test...
     image.stop_marking(clear_markers=True)
-    assert image.get_markers() is None
+    assert image.get_all_markers() is None
     assert image.is_marking is False
 
 
@@ -147,7 +149,7 @@ def test_set_markers():
     assert '10' in str(image.marker)
 
 
-def test_reset_markers():
+def test_remove_all_markers():
     image = ImageWidget()
     # First test: this shouldn't raise any errors
     # (it also doesn't *do* anything...)
@@ -159,11 +161,11 @@ def test_reset_markers():
                       skycoord_colname='coord', marker_name='test')
     image.add_markers(table, x_colname='x', y_colname='y',
                       skycoord_colname='coord', marker_name='test2')
-    image.reset_markers()
+    image.remove_all_markers()
     with pytest.raises(ValueError):
-        image.get_markers(marker_name='test')
+        image.get_markers_by_name(marker_name='test')
     with pytest.raises(ValueError):
-        image.get_markers(marker_name='test2')
+        image.get_markers_by_name(marker_name='test2')
 
 
 def test_remove_markers_by_name():
@@ -183,10 +185,15 @@ def test_remove_markers_by_name():
 
 def test_stretch():
     image = ImageWidget()
+    data = np.random.random([100, 100])
+    # image.load_array(data)
     with pytest.raises(ValueError) as e:
         image.stretch = 'not a valid value'
         assert 'must be one of' in str(e.value)
-
+    # 👇👇👇👇 handle this case more gracefully 👇👇👇
+    # (no data set, so finding the limits fails)
+    # (should probably record the choice, then apply)
+    # (when data is loaded)
     image.stretch = 'log'
     assert isinstance(image.stretch, (BaseStretch, str))
 
@@ -230,7 +237,7 @@ def test_colormap():
 def test_cursor():
     image = ImageWidget()
     assert image.cursor in ALLOWED_CURSOR_LOCATIONS
-    with pytest.raises(ValueError):
+    with pytest.raises(TraitError):
         image.cursor = 'not a valid option'
     image.cursor = 'bottom'
     assert image.cursor == 'bottom'
@@ -294,7 +301,7 @@ def test_scroll_pan():
 def test_save():
     image = ImageWidget()
     filename = 'woot.png'
-    image.save(filename)
+    image.save(filename, overwrite=True)
 
 
 def test_width_height():
