@@ -414,6 +414,7 @@ class ImageWidget(ipw.VBox):
         self._wcs = None
         self._is_marking = False
 
+        self.scroll_pan = True
         # Use this to manage whether or not to send changes in zoom level
         # to the viewer.
         self._zoom_source_is_gui = False
@@ -421,6 +422,10 @@ class ImageWidget(ipw.VBox):
         # image know that the ImageWidget itself is in the process of
         # updating the zoom.
         self._updating_zoom = False
+
+        # Provide an Output widget to which prints can be directed for
+        # debugging.
+        self._print_out = ipw.Output()
 
         self.marker = {'color': 'red', 'radius': 20, 'type': 'square'}
         self.cuts = apviz.AsymmetricPercentileInterval(1, 99)
@@ -776,15 +781,6 @@ class ImageWidget(ipw.VBox):
     def colormap_options(self):
         return pyplot.colormaps()
 
-    # # Marker-related methods
-    # @abstractmethod
-    # def start_marking(self):
-    #     raise NotImplementedError
-
-    # @abstractmethod
-    # def stop_marking(self):
-    #     raise NotImplementedError
-
     def _validate_marker_name(self, marker_name):
         if marker_name in self.RESERVED_MARKER_SET_NAMES:
             raise ValueError(
@@ -818,11 +814,12 @@ class ImageWidget(ipw.VBox):
         # the same name to be plotted at once.
         marks = self.get_markers_by_name(marker_name)
 
-        self._astro_im.plot_named_markers(marks['x'], marks['y'],
-                                          marker_name,
-                                          color=self.marker['color'],
-                                          size=self.marker['radius']**2,
-                                          style=self.marker['type'])
+        if marks:
+            self._astro_im.plot_named_markers(marks['x'], marks['y'],
+                                              marker_name,
+                                              color=self.marker['color'],
+                                              size=self.marker['radius']**2,
+                                              style=self.marker['type'])
 
     def remove_markers_by_name(self, marker_name):
         # Remove from our tracking table
@@ -1020,3 +1017,13 @@ class ImageWidget(ipw.VBox):
         self.click_drag = self._cached_state['click_drag']
         self.scroll_pan = self._cached_state['scroll_pan']
         self._cached_state = {}
+
+    @property
+    def print_out(self):
+        """
+        Return an output widget for display in the notebook which
+        captures any printed output produced by the viewer widget.
+
+        Intended primarily for debugging.
+        """
+        return self._print_out
