@@ -326,7 +326,7 @@ class MarkerTableManager:
 
     def _init_table(self):
         self._table = Table(names=(self._xcol, self._ycol, self._names),
-                            dtype=('int32', 'int32', 'str'))
+                            dtype=(np.float64, np.float64, 'str'))
 
     @property
     def xcol(self):
