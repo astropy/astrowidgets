@@ -94,7 +94,7 @@ def test_select_points():
 
 def test_get_selection():
     image = ImageWidget()
-    marks = image.get_markers()
+    marks = image.get_all_markers()
     assert isinstance(marks, Table) or marks is None
 
 
@@ -102,7 +102,7 @@ def test_stop_marking():
     image = ImageWidget()
     # This is not much of a test...
     image.stop_marking(clear_markers=True)
-    assert image.get_markers() is None
+    assert image.get_all_markers() is None
     assert image.is_marking is False
 
 
@@ -168,19 +168,19 @@ def test_reset_markers():
     image = ImageWidget()
     # First test: this shouldn't raise any errors
     # (it also doesn't *do* anything...)
-    image.reset_markers()
-    assert image.get_markers() is None
+    image.remove_all_markers()
+    assert image.get_all_markers() is None
     table = Table(data=np.random.randint(0, 100, [5, 2]),
                   names=['x', 'y'], dtype=('int', 'int'))
     image.add_markers(table, x_colname='x', y_colname='y',
                       skycoord_colname='coord', marker_name='test')
     image.add_markers(table, x_colname='x', y_colname='y',
                       skycoord_colname='coord', marker_name='test2')
-    image.reset_markers()
+    image.remove_all_markers()
     with pytest.raises(ValueError):
-        image.get_markers(marker_name='test')
+        image.get_markers_by_name('test')
     with pytest.raises(ValueError):
-        image.get_markers(marker_name='test2')
+        image.get_markers_by_name('test2')
 
 
 def test_remove_markers():
@@ -188,7 +188,7 @@ def test_remove_markers():
     # Add a tag name...
     image._marktags.add(image._default_mark_tag_name)
     with pytest.raises(ValueError) as e:
-        image.remove_markers('arf')
+        image.remove_markers_by_name('arf')
     assert 'arf' in str(e.value)
 
 
@@ -214,7 +214,7 @@ def test_cuts():
     # should raise an error.
     with pytest.raises(ValueError) as e:
         image.cuts = (1, 10, 100)
-    assert 'length 2' in str(e.value)
+    assert 'Cut levels must be given as (low, high)' in str(e.value)
 
     # These ought to succeed
 
@@ -283,7 +283,7 @@ def test_click_center():
     # If marking is in progress then setting click center should fail
     with pytest.raises(ValueError) as e:
         image.click_center = True
-    assert 'Cannot set' in str(e.value)
+    assert 'Interactive marking is in progress' in str(e.value)
 
     # setting to False is fine though so no error is expected here
     image.click_center = False
