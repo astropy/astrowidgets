@@ -77,8 +77,6 @@ class ImageWidget(ipyw.VBox):
             self._jup_img.max_width = '100%'
             self._jup_img.height = 'auto'
 
-        self._pixel_offset = pixel_coords_offset
-
         # Set the width of the box containing the image to the desired width
         # Note: We are NOT setting the height. That is because the height
         # is automatically set by the image aspect ratio.
@@ -196,8 +194,8 @@ class ImageWidget(ipyw.VBox):
             except Exception:
                 imval = 'N/A'
 
-            val = (f'X: {data_x + self._pixel_offset:.2f}, '
-                   f'Y: {data_y + self._pixel_offset:.2f}')
+            val = (f'X: {data_x:.2f}, '
+                   f'Y: {data_y:.2f}')
 
             if image.wcs.wcs is not None:
                 try:
@@ -239,8 +237,8 @@ class ImageWidget(ipyw.VBox):
 
             # For debugging.
             with self.print_out:
-                print(f'Centered on X={data_x + self._pixel_offset} '
-                      f'Y={data_y + self._pixel_offset}')
+                print(f'Centered on X={data_x} '
+                      f'Y={data_y}')
 
     def load_fits(self, filename, numhdu=None, memmap=None):
         """Load a FITS file or HDU into the viewer.
@@ -320,7 +318,7 @@ class ImageWidget(ipyw.VBox):
         if isinstance(point, SkyCoord):
             self._viewer.set_pan(point.ra.deg, point.dec.deg, coord='wcs')
         else:
-            self._viewer.set_pan(*(np.asarray(point) - self._pixel_offset))
+            self._viewer.set_pan(*(np.asarray(point)))
 
     @deprecated('0.3', alternative='offset_by')
     def offset_to(self, dx, dy, skycoord_offset=False):
@@ -570,10 +568,6 @@ class ImageWidget(ipyw.VBox):
 
             sky_col = SkyCoord(radec_col[:, 0], radec_col[:, 1], unit='deg')
 
-        # Convert X,Y from 0-indexed to 1-indexed
-        if self._pixel_offset != 0:
-            xy_col += self._pixel_offset
-
         # Build table
         if include_skycoord:
             markers_table = Table(
@@ -667,12 +661,6 @@ class ImageWidget(ipyw.VBox):
         else:  # Use X,Y
             coord_x = table[x_colname].data
             coord_y = table[y_colname].data
-            # Convert data coordinates from 1-indexed to 0-indexed
-            if self._pixel_offset != 0:
-                # Don't use the in-place operator -= here that modifies
-                # the input table.
-                coord_x = coord_x - self._pixel_offset
-                coord_y = coord_y - self._pixel_offset
 
         # Prepare canvas and retain existing marks
         try:

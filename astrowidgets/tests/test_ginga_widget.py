@@ -97,38 +97,6 @@ def test_adding_markers_as_world_recovers_with_get_markers():
                                mark_coord_table['coord'].dec.deg)
 
 
-def test_can_set_pixel_offset_at_object_level():
-    # The pixel offset below is nonsensical. It is chosen simply
-    # to make it easy to check for.
-    offset = 3
-    image = ImageWidget(image_width=300, image_height=300,
-                        pixel_coords_offset=offset)
-    assert image._pixel_offset == offset
-
-
-def test_move_callback_includes_offset():
-    # The pixel offset below is nonsensical. It is chosen simply
-    # to make it easy to check for.
-    offset = 3
-    image = ImageWidget(image_width=300, image_height=300,
-                        pixel_coords_offset=offset)
-    data = np.random.random([300, 300])
-    image.load_array(data)
-    # Send a fake move to the callback. What gets put in the cursor
-    # value should be the event we sent in plus the offset.
-    image.click_center = True
-    data_x = 100
-    data_y = 200
-    image._mouse_move_cb(image._viewer, None, data_x, data_y)
-    output_contents = image._jup_coord.value
-    x_out = re.search(r'X: ([\d\.\d]+)', output_contents)
-    x_out = x_out.groups(1)[0]
-    y_out = re.search(r'Y: ([\d\.\d]+)', output_contents)
-    y_out = y_out.groups(1)[0]
-    assert float(x_out) == data_x + offset
-    assert float(y_out) == data_y + offset
-
-
 def test_can_add_markers_with_names():
     """
     Test a few things related to naming marker sets
