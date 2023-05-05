@@ -43,9 +43,16 @@ class ImageWidget(ipyw.VBox):
 
     image_width, image_height : int
         Dimension of Jupyter notebook's image widget.
+
+    image_widget : obj or None
+        Jupyter notebook's image widget. If None, a new widget will be created.
+
+    cursor_widget : obj or None
+        Jupyter notebook's cursor widget. If None, a new widget will be created.
     """
 
     def __init__(self, logger=None, image_width=500, image_height=500,
+                 image_widget=None, cursor_widget=None,
                  **kwargs):
         super().__init__()
         if 'use_opencv' in kwargs:
@@ -54,7 +61,7 @@ class ImageWidget(ipyw.VBox):
                           DeprecationWarning)
 
         self._viewer = EnhancedCanvasView(logger=logger)
-               self.ALLOWED_CURSOR_LOCATIONS = ['top', 'bottom', None]
+        self.ALLOWED_CURSOR_LOCATIONS = ['top', 'bottom', None]
         self.RESERVED_MARKER_SET_NAMES = ['all']
 
         if image_widget is None:
@@ -107,8 +114,6 @@ class ImageWidget(ipyw.VBox):
 
         self._cursor = 'bottom'
         self.children = [self._jup_img, self._jup_coord]
-
-
 
         # These need to also be set for now.
         # Ginga uses them to figure out what size image to make.
