@@ -31,6 +31,7 @@ jobs:
         flake8 astrowidgets --count
 
   tests:
+    name: ${{ matrix.name }}
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: true
@@ -48,8 +49,6 @@ jobs:
     - name: Run tests
       run: tox -e py39-test
 
-  devtests:
-    runs-on: ubuntu-latest
     steps:
     - name: Checkout code
       uses: actions/checkout@v3

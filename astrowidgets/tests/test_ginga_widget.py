@@ -7,7 +7,8 @@ from astropy.wcs import WCS
 from astropy.nddata import CCDData
 from astropy.coordinates import SkyCoord
 
-from ..core import ImageWidget, RESERVED_MARKER_SET_NAMES
+from ..ginga import ImageWidget
+from astrowidgets.interface_definition import RESERVED_MARKER_SET_NAMES
 
 
 def _make_fake_ccd(with_wcs=True):
@@ -86,7 +87,7 @@ def test_adding_markers_as_world_recovers_with_get_markers():
     marks_coords = SkyCoord(marks_world, unit='degree')
     mark_coord_table = Table(data=[marks_coords], names=['coord'])
     iw.add_markers(mark_coord_table, use_skycoord=True)
-    result = iw.get_markers()
+    result = iw.get_all_markers()
     # Check the x, y positions as long as we are testing things...
     np.testing.assert_allclose(result['x'], marks_pix['x'])
     np.testing.assert_allclose(result['y'], marks_pix['y'])
@@ -94,38 +95,6 @@ def test_adding_markers_as_world_recovers_with_get_markers():
                                mark_coord_table['coord'].ra.deg)
     np.testing.assert_allclose(result['coord'].dec.deg,
                                mark_coord_table['coord'].dec.deg)
-
-
-def test_can_set_pixel_offset_at_object_level():
-    # The pixel offset below is nonsensical. It is chosen simply
-    # to make it easy to check for.
-    offset = 3
-    image = ImageWidget(image_width=300, image_height=300,
-                        pixel_coords_offset=offset)
-    assert image._pixel_offset == offset
-
-
-def test_move_callback_includes_offset():
-    # The pixel offset below is nonsensical. It is chosen simply
-    # to make it easy to check for.
-    offset = 3
-    image = ImageWidget(image_width=300, image_height=300,
-                        pixel_coords_offset=offset)
-    data = np.random.random([300, 300])
-    image.load_array(data)
-    # Send a fake move to the callback. What gets put in the cursor
-    # value should be the event we sent in plus the offset.
-    image.click_center = True
-    data_x = 100
-    data_y = 200
-    image._mouse_move_cb(image._viewer, None, data_x, data_y)
-    output_contents = image._jup_coord.value
-    x_out = re.search(r'X: ([\d\.\d]+)', output_contents)
-    x_out = x_out.groups(1)[0]
-    y_out = re.search(r'Y: ([\d\.\d]+)', output_contents)
-    y_out = y_out.groups(1)[0]
-    assert float(x_out) == data_x + offset
-    assert float(y_out) == data_y + offset
 
 
 def test_can_add_markers_with_names():
@@ -152,7 +121,7 @@ def test_can_add_markers_with_names():
                       marker_name='nonsense')
 
     # check that we get the right number of markers
-    marks = image.get_markers(marker_name='nonsense')
+    marks = image.get_markers_by_name(marker_name='nonsense')
     assert len(marks) == 6
 
     # Make sure setting didn't change the default name
@@ -163,7 +132,7 @@ def test_can_add_markers_with_names():
     assert image._marktags == set(['nonsense', image._default_mark_tag_name])
 
     # Delete just the nonsense markers
-    image.remove_markers('nonsense')
+    image.remove_markers_by_name('nonsense')
 
     assert 'nonsense' not in image._marktags
     assert image._default_mark_tag_name in image._marktags
@@ -172,7 +141,7 @@ def test_can_add_markers_with_names():
     image.add_markers(Table(data=[x, y], names=['x', 'y']),
                       marker_name='nonsense')
     # ...and now delete all of the markers
-    image.reset_markers()
+    image.remove_all_markers()
     # We should have no markers on the image
     assert image._marktags == set()
 
@@ -223,14 +192,14 @@ def test_get_marker_with_names():
     assert len(image._marktags) == 3
 
     for marker in image._marktags:
-        out_table = image.get_markers(marker_name=marker)
+        out_table = image.get_markers_by_name(marker)
         # No guarantee markers will come back in the same order, so sort them.
         out_table.sort('x')
         assert (out_table['x'] == input_markers['x']).all()
         assert (out_table['y'] == input_markers['y']).all()
 
     # Get all of markers at once
-    all_marks = image.get_markers(marker_name='all')
+    all_marks = image.get_all_markers()
 
     # That should have given us three copies of the input table
     expected = vstack([input_markers] * 3, join_type='exact')
@@ -253,7 +222,7 @@ def test_unknown_marker_name_error():
     iw = ImageWidget()
     bad_name = 'not a real marker name'
     with pytest.raises(ValueError) as e:
-        iw.get_markers(marker_name=bad_name)
+        iw.get_markers_by_name(marker_name=bad_name)
 
     assert f"No markers named '{bad_name}'" in str(e.value)
 
@@ -270,7 +239,7 @@ def test_marker_name_has_no_marks_warning():
     iw.start_marking(marker_name=bad_name)
 
     with pytest.warns(UserWarning) as record:
-        iw.get_markers(marker_name=bad_name)
+        iw.get_markers_by_name(marker_name=bad_name)
 
     assert f"Marker set named '{bad_name}' is empty" in str(record[0].message)
 
@@ -296,7 +265,7 @@ def test_empty_marker_name_works_with_all():
     # Start marking to create a new marker set that is empty
     iw.start_marking(marker_name='empty')
 
-    marks = iw.get_markers(marker_name='all')
+    marks = iw.get_all_markers()
     assert len(marks) == len(x)
     assert 'empty' not in marks['marker name']
 
