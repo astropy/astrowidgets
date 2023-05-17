@@ -10,30 +10,30 @@ from astropy.utils.exceptions import AstropyDeprecationWarning
 
 from ginga.ColorDist import ColorDistBase
 
-from ..core import ImageWidget, ALLOWED_CURSOR_LOCATIONS
+from ..ginga import ImageWidget, ALLOWED_CURSOR_LOCATIONS
 
 
-def test_load_fits():
+def test_load_fits():  # yep
     image = ImageWidget()
     data = np.random.random([100, 100])
     hdu = fits.PrimaryHDU(data=data)
     image.load_fits(hdu)
 
 
-def test_load_nddata():
+def test_load_nddata():  # yep
     image = ImageWidget()
     data = np.random.random([100, 100])
     nddata = NDData(data)
     image.load_nddata(nddata)
 
 
-def test_load_array():
+def test_load_array():  # yep
     image = ImageWidget()
     data = np.random.random([100, 100])
     image.load_array(data)
 
 
-def test_center_on():
+def test_center_on():  # yep
     image = ImageWidget()
     x = 10
     y = 10
@@ -48,7 +48,7 @@ def test_offset_to():
         image.offset_to(dx, dy)
 
 
-def test_offset_by():
+def test_offset_by():  # yep
     image = ImageWidget()
 
     # Pixels
@@ -66,13 +66,13 @@ def test_offset_by():
         image.offset_by(1 * u.arcsec, 1)
 
 
-def test_zoom_level():
+def test_zoom_level():   # yep
     image = ImageWidget()
     image.zoom_level = 5
     assert image.zoom_level == 5
 
 
-def test_zoom():
+def test_zoom():   # yep
     image = ImageWidget()
     image.zoom_level = 3
     val = 2
@@ -80,19 +80,19 @@ def test_zoom():
     assert image.zoom_level == 6
 
 
-@pytest.mark.xfail(reason='Not implemented yet')
+@pytest.mark.xfail(reason='Not implemented yet')   # Nope, note even sure what this is
 def test_select_points():
     image = ImageWidget()
     image.select_points()
 
 
-def test_get_selection():
+def test_get_selection():   # Um, how is this testing a selection?!?
     image = ImageWidget()
     marks = image.get_markers()
     assert isinstance(marks, Table) or marks is None
 
 
-def test_stop_marking():
+def test_stop_marking():   # In test_marking_options
     image = ImageWidget()
     # This is not much of a test...
     image.stop_marking(clear_markers=True)
@@ -100,14 +100,14 @@ def test_stop_marking():
     assert image.is_marking is False
 
 
-def test_is_marking():
+def test_is_marking():   # In test_marking_options
     image = ImageWidget()
     assert image.is_marking in [True, False]
     with pytest.raises(AttributeError):
         image.is_marking = True
 
 
-def test_start_marking():
+def test_start_marking():   # In test_marking_options
     image = ImageWidget()
 
     # Setting these to check that start_marking affects them.
@@ -142,7 +142,7 @@ def test_start_marking():
     assert image.click_drag
 
 
-def test_add_markers():
+def test_add_markers():  # In test_marking_options
     image = ImageWidget()
     table = Table(data=np.random.randint(0, 100, [5, 2]),
                   names=['x', 'y'], dtype=('int', 'int'))
@@ -150,7 +150,7 @@ def test_add_markers():
                       skycoord_colname='coord')
 
 
-def test_set_markers():
+def test_set_markers(): # In test_marking_options
     image = ImageWidget()
     image.marker = {'color': 'yellow', 'radius': 10, 'type': 'cross'}
     assert 'cross' in str(image.marker)
@@ -158,7 +158,7 @@ def test_set_markers():
     assert '10' in str(image.marker)
 
 
-def test_reset_markers():
+def test_reset_markers(): # In test_marking_options
     image = ImageWidget()
     # First test: this shouldn't raise any errors
     # (it also doesn't *do* anything...)
@@ -177,7 +177,7 @@ def test_reset_markers():
         image.get_markers(marker_name='test2')
 
 
-def test_remove_markers():
+def test_remove_markers(): # In test_marking_options
     image = ImageWidget()
     # Add a tag name...
     image._marktags.add(image._default_mark_tag_name)
@@ -186,7 +186,7 @@ def test_remove_markers():
     assert 'arf' in str(e.value)
 
 
-def test_stretch():
+def test_stretch():   # yep
     image = ImageWidget()
     with pytest.raises(ValueError) as e:
         image.stretch = 'not a valid value'
@@ -196,7 +196,7 @@ def test_stretch():
     assert isinstance(image.stretch, (ColorDistBase))
 
 
-def test_cuts():
+def test_cuts():   # yep
     image = ImageWidget()
 
     # An invalid string should raise an error
@@ -219,7 +219,7 @@ def test_cuts():
     assert image.cuts == (10, 100)
 
 
-def test_colormap():
+def test_colormap():   # yep
     image = ImageWidget()
     cmap_desired = 'gray'
     cmap_list = image.colormap_options
@@ -228,7 +228,7 @@ def test_colormap():
     image.set_colormap(cmap_desired)
 
 
-def test_cursor():
+def test_cursor():   # yep
     image = ImageWidget()
     assert image.cursor in ALLOWED_CURSOR_LOCATIONS
     with pytest.raises(ValueError):
@@ -237,7 +237,7 @@ def test_cursor():
     assert image.cursor == 'bottom'
 
 
-def test_click_drag():
+def test_click_drag():   # yep
     image = ImageWidget()
     # Set this to ensure that click_drag turns it off
     image._click_center = True
@@ -260,7 +260,7 @@ def test_click_drag():
     assert 'Interactive marking' in str(e.value)
 
 
-def test_click_center():
+def test_click_center():   # yep
     image = ImageWidget()
     assert (image.click_center is True) or (image.click_center is False)
 
@@ -283,7 +283,7 @@ def test_click_center():
     image.click_center = False
 
 
-def test_scroll_pan():
+def test_scroll_pan():   # yep
     image = ImageWidget()
 
     # Make sure scroll_pan is actually settable
@@ -292,13 +292,13 @@ def test_scroll_pan():
         assert image.scroll_pan is val
 
 
-def test_save(tmp_path):
+def test_save(tmp_path):   # yep
     image = ImageWidget()
     filename = 'woot.png'
     image.save(tmp_path / filename)
 
 
-def test_width_height():
+def test_width_height():   # yep
     image = ImageWidget(image_width=250, image_height=100)
     assert image.image_width == 250
     assert image.image_height == 100

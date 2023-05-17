@@ -7,7 +7,7 @@ from astropy.wcs import WCS
 from astropy.nddata import CCDData
 from astropy.coordinates import SkyCoord
 
-from ..core import ImageWidget, RESERVED_MARKER_SET_NAMES
+from ..ginga import ImageWidget, RESERVED_MARKER_SET_NAMES
 
 
 def _make_fake_ccd(with_wcs=True):
@@ -42,7 +42,7 @@ def _make_fake_ccd(with_wcs=True):
     return CCDData(data=fake_image, wcs=wcs, unit='adu')
 
 
-def test_setting_image_width_height():
+def test_setting_image_width_height():   # yep
     image = ImageWidget()
     width = 200
     height = 300
@@ -51,7 +51,7 @@ def test_setting_image_width_height():
     assert image._viewer.get_window_size() == (width, height)
 
 
-def test_add_marker_does_not_modify_input_table():
+def test_add_marker_does_not_modify_input_table():   # in test_marking_operations
     # Regression test for #45
     # Adding markers should not modify the input data table
     image = ImageWidget(image_width=300, image_height=300,
@@ -67,7 +67,7 @@ def test_add_marker_does_not_modify_input_table():
     assert (in_table == orig_table).all()
 
 
-def test_adding_markers_as_world_recovers_with_get_markers():
+def test_adding_markers_as_world_recovers_with_get_markers():   # yep
     """
     Make sure that our internal conversion from world to pixel
     coordinates doesn't mess anything up.
@@ -128,7 +128,7 @@ def test_move_callback_includes_offset():
     assert float(y_out) == data_y + offset
 
 
-def test_can_add_markers_with_names():
+def test_can_add_markers_with_names():  # in test_marking_operations?
     """
     Test a few things related to naming marker sets
     """
@@ -185,7 +185,7 @@ def test_can_add_markers_with_names():
     assert image._interactive_marker_set_name in image._marktags
 
 
-def test_mark_with_reserved_name_raises_error():
+def test_mark_with_reserved_name_raises_error(): # in test_marking_operations
     npix_side = 200
     image = ImageWidget(image_width=npix_side,
                         image_height=npix_side)
@@ -258,7 +258,7 @@ def test_unknown_marker_name_error():
     assert f"No markers named '{bad_name}'" in str(e.value)
 
 
-def test_marker_name_has_no_marks_warning():
+def test_marker_name_has_no_marks_warning():   # in test_marking_operations
     """
     Regression test for https://github.com/astropy/astrowidgets/issues/97
 
@@ -301,7 +301,7 @@ def test_empty_marker_name_works_with_all():
     assert 'empty' not in marks['marker name']
 
 
-def test_add_single_marker():
+def test_add_single_marker():  # in test_marking_operations
     """
     Test a few things related to naming marker sets
     """
