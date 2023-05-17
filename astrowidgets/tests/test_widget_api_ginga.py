@@ -8,9 +8,11 @@ ginga = pytest.importorskip("ginga",
                                    "available.")
 from astrowidgets.ginga import ImageWidget  # noqa: E402
 
+
 def test_instance():
     image = ImageWidget()
     assert isinstance(image, ImageViewerInterface)
+
 
 class TestGingaWidget(ImageWidgetAPITest):
     image_widget_class = ImageWidget

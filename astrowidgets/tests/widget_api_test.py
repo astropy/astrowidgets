@@ -219,16 +219,14 @@ class ImageWidgetAPITest:
             with pytest.raises(ValueError, match='not allowed'):
                 self.image.add_markers(tab, marker_name=name)
 
-
         # Add markers with no marker name and check we can retrieve them
         # using the default marker name
-        self.image.add_markers(tab,  x_colname='x', y_colname='y',
+        self.image.add_markers(tab, x_colname='x', y_colname='y',
                                skycoord_colname='coord')
         # Don't care about the order of the marker names so use set instead of
         # list.
         marknames = self.image._marktags
-        assert (set(marknames) ==
-                set(['test2', self.image._default_mark_tag_name]))
+        assert (set(marknames) == set(['test2', self.image._default_mark_tag_name]))
         # assert (set(self.image.get_marker_names()) ==
         #         set(['test2', self.image._default_mark_tag_name]))
 
@@ -267,9 +265,9 @@ class ImageWidgetAPITest:
         np.testing.assert_allclose(result['x'], marks_pix['x'])
         np.testing.assert_allclose(result['y'], marks_pix['y'])
         np.testing.assert_allclose(result['coord'].ra.deg,
-                                mark_coord_table['coord'].ra.deg)
+                                   mark_coord_table['coord'].ra.deg)
         np.testing.assert_allclose(result['coord'].dec.deg,
-                                mark_coord_table['coord'].dec.deg)
+                                   mark_coord_table['coord'].dec.deg)
 
     def test_stretch(self):
         original_stretch = self.image.stretch

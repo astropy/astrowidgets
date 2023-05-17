@@ -5,7 +5,6 @@ import numpy as np
 from astropy.table import Table, vstack
 from astropy.wcs import WCS
 from astropy.nddata import CCDData
-from astropy.coordinates import SkyCoord
 
 from ..ginga import ImageWidget
 
@@ -72,8 +71,6 @@ def test_move_callback_includes_offset():
     y_out = y_out.groups(1)[0]
     assert float(x_out) == data_x + offset
     assert float(y_out) == data_y + offset
-
-
 
 
 def test_get_marker_with_names():
