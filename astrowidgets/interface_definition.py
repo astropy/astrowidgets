@@ -34,7 +34,7 @@ class ImageViewerInterface(Protocol):
     ALLOWED_CURSOR_LOCATIONS = ('top', 'bottom', None)
 
     # List of marker names that are for internal use only
-    RESERVED_MARKER_SET_NAMES = ('all')
+    RESERVED_MARKER_SET_NAMES = ('all', )
 
     # The methods, grouped loosely by purpose
 
