@@ -564,6 +564,9 @@ class ImageWidget(ipyw.VBox):
                     del table[skycoord_colname]
                 tables.append(table)
 
+            if len(tables) == 0:
+                return None
+
             stacked = vstack(tables, join_type='exact')
 
             if coordinates:
