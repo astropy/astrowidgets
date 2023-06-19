@@ -21,6 +21,11 @@ from ginga.canvas.CanvasObject import drawCatalog
 from ginga.web.jupyterw.ImageViewJpw import EnhancedCanvasView
 from ginga.util.wcs import ra_deg_to_str, dec_deg_to_str
 
+from astrowidgets.interface_definition import (
+    ALLOWED_CURSOR_LOCATIONS,
+    RESERVED_MARKER_SET_NAMES
+)
+
 __all__ = ['ImageWidget']
 
 
@@ -50,10 +55,10 @@ class ImageWidget(ipyw.VBox):
 
     """
     # Allowed locations for cursor display
-    ALLOWED_CURSOR_LOCATIONS = ('top', 'bottom', None)
+    ALLOWED_CURSOR_LOCATIONS = ALLOWED_CURSOR_LOCATIONS
 
     # List of marker names that are for internal use only
-    RESERVED_MARKER_SET_NAMES = ('all', )
+    RESERVED_MARKER_SET_NAMES = RESERVED_MARKER_SET_NAMES
 
     def __init__(self, logger=None, image_width=500, image_height=500,
                  pixel_coords_offset=0, **kwargs):
