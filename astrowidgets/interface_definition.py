@@ -16,7 +16,7 @@ __all__ = [
 
 @runtime_checkable
 class ImageViewerInterface(Protocol):
-    # This are attributes, not methods. The type annotations are there
+    # These are attributes, not methods. The type annotations are there
     # to make sure Protocol knows they are attributes. Python does not
     # do any checking at all of these types.
     click_center: bool
@@ -25,6 +25,10 @@ class ImageViewerInterface(Protocol):
     image_width: int
     image_height: int
     zoom_level: float
+    is_marking: bool
+    stretch_options: tuple
+    autocut_options: tuple
+    cursor: str
     marker: Any
     cuts: Any
     stretch: str
