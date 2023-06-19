@@ -35,10 +35,10 @@ class ImageViewerInterface(Protocol):
     # viewer: Any
 
     # Allowed locations for cursor display
-    ALLOWED_CURSOR_LOCATIONS : tuple = ALLOWED_CURSOR_LOCATIONS
+    ALLOWED_CURSOR_LOCATIONS: tuple = ALLOWED_CURSOR_LOCATIONS
 
     # List of marker names that are for internal use only
-    RESERVED_MARKER_SET_NAMES : tuple = RESERVED_MARKER_SET_NAMES
+    RESERVED_MARKER_SET_NAMES: tuple = RESERVED_MARKER_SET_NAMES
 
     # The methods, grouped loosely by purpose
 
