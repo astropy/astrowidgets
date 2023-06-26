@@ -21,13 +21,12 @@ from ginga.canvas.CanvasObject import drawCatalog
 from ginga.web.jupyterw.ImageViewJpw import EnhancedCanvasView
 from ginga.util.wcs import ra_deg_to_str, dec_deg_to_str
 
+from astrowidgets.interface_definition import (
+    ALLOWED_CURSOR_LOCATIONS,
+    RESERVED_MARKER_SET_NAMES
+)
+
 __all__ = ['ImageWidget']
-
-# Allowed locations for cursor display
-ALLOWED_CURSOR_LOCATIONS = ['top', 'bottom', None]
-
-# List of marker names that are for internal use only
-RESERVED_MARKER_SET_NAMES = ['all']
 
 
 class ImageWidget(ipyw.VBox):
@@ -55,6 +54,11 @@ class ImageWidget(ipyw.VBox):
         correct value to use.*
 
     """
+    # Allowed locations for cursor display
+    ALLOWED_CURSOR_LOCATIONS = ALLOWED_CURSOR_LOCATIONS
+
+    # List of marker names that are for internal use only
+    RESERVED_MARKER_SET_NAMES = RESERVED_MARKER_SET_NAMES
 
     def __init__(self, logger=None, image_width=500, image_height=500,
                  pixel_coords_offset=0, **kwargs):
@@ -565,6 +569,9 @@ class ImageWidget(ipyw.VBox):
                     del table[skycoord_colname]
                 tables.append(table)
 
+            if len(tables) == 0:
+                return None
+
             stacked = vstack(tables, join_type='exact')
 
             if coordinates:
@@ -648,11 +655,11 @@ class ImageWidget(ipyw.VBox):
         """
         Raise an error if the marker_name is not allowed.
         """
-        if marker_name in RESERVED_MARKER_SET_NAMES:
+        if marker_name in self.RESERVED_MARKER_SET_NAMES:
             raise ValueError('The marker name {} is not allowed. Any name is '
                              'allowed except these: '
                              '{}'.format(marker_name,
-                                         ', '.join(RESERVED_MARKER_SET_NAMES)))
+                                         ', '.join(self.RESERVED_MARKER_SET_NAMES)))
 
     def add_markers(self, table, x_colname='x', y_colname='y',
                     skycoord_colname='coord', use_skycoord=False,
@@ -888,7 +895,7 @@ class ImageWidget(ipyw.VBox):
         else:
             raise ValueError('Invalid value {} for cursor.'
                              'Valid values are: '
-                             '{}'.format(val, ALLOWED_CURSOR_LOCATIONS))
+                             '{}'.format(val, self.ALLOWED_CURSOR_LOCATIONS))
         self._cursor = val
 
     @property

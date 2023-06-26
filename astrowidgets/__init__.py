@@ -6,4 +6,4 @@
 from ._astropy_init import *  # noqa
 # ----------------------------------------------------------------------------
 
-from .core import *  # noqa
+from .ginga import *  # noqa
