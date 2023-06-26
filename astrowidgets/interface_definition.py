@@ -130,8 +130,8 @@ class ImageViewerInterface(Protocol):
         raise NotImplementedError
 
     @abstractmethod
-    def add_markers(self, table: Table, x_colname: str ='x', y_colname: str ='y',
-                    skycoord_colname: str ='coord', use_skycoord: bool =False,
+    def add_markers(self, table: Table, x_colname: str = 'x', y_colname: str = 'y',
+                    skycoord_colname: str = 'coord', use_skycoord: bool = False,
                     marker_name: str | None = None) -> None:
         """
         Add markers to the image.
@@ -175,7 +175,7 @@ class ImageViewerInterface(Protocol):
     #     raise NotImplementedError
 
     @abstractmethod
-    def remove_markers(self, marker_name: str | None =None) -> None:
+    def remove_markers(self, marker_name: str | None = None) -> None:
         """
         Remove markers from the image.
 
@@ -192,9 +192,9 @@ class ImageViewerInterface(Protocol):
     #     raise NotImplementedError
 
     @abstractmethod
-    def get_markers(self, x_colname: str ='x', y_colname: str ='y',
-                    skycoord_colname: str ='coord',
-                    marker_name: str | None=None) -> Table:
+    def get_markers(self, x_colname: str = 'x', y_colname: str = 'y',
+                    skycoord_colname: str = 'coord',
+                    marker_name: str | None = None) -> Table:
         """
         Get the marker positions.
 
