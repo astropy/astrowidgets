@@ -1,5 +1,13 @@
 from typing import Protocol, runtime_checkable, Any
 from abc import abstractmethod
+import os
+
+from astropy.coordinates import SkyCoord
+from astropy.nddata import NDData
+from astropy.table import Table
+from astropy.units import Quantity
+
+from numpy.typing import ArrayLike
 
 # Allowed locations for cursor display
 ALLOWED_CURSOR_LOCATIONS = ('top', 'bottom', None)
@@ -44,7 +52,7 @@ class ImageViewerInterface(Protocol):
 
     # Methods for loading data
     @abstractmethod
-    def load_fits(self, file):
+    def load_fits(self, file: str | os.PathLike) -> None:
         """
         Load a FITS file into the viewer.
 
@@ -57,7 +65,7 @@ class ImageViewerInterface(Protocol):
         raise NotImplementedError
 
     @abstractmethod
-    def load_array(self, array):
+    def load_array(self, array: ArrayLike) -> None:
         """
         Load a 2D array into the viewer.
 
@@ -69,7 +77,7 @@ class ImageViewerInterface(Protocol):
         raise NotImplementedError
 
     @abstractmethod
-    def load_nddata(self, data):
+    def load_nddata(self, data: NDData) -> None:
         """
         Load an `astropy.nddata.NDData` object into the viewer.
 
@@ -82,7 +90,7 @@ class ImageViewerInterface(Protocol):
 
     # Saving contents of the view and accessing the view
     @abstractmethod
-    def save(self, filename):
+    def save(self, filename: str | os.PathLike) -> None:
         """
         Save the current view to a file.
 
@@ -96,7 +104,7 @@ class ImageViewerInterface(Protocol):
 
     # Marker-related methods
     @abstractmethod
-    def start_marking(self, marker_name=None):
+    def start_marking(self, marker_name: str | None = None) -> None:
         """
         Start interactive marking of points on the image.
 
@@ -109,7 +117,7 @@ class ImageViewerInterface(Protocol):
         raise NotImplementedError
 
     @abstractmethod
-    def stop_marking(self, clear_markers=False):
+    def stop_marking(self, clear_markers: bool = False) -> None:
         """
         Stop interactive marking of points on the image.
 
@@ -122,9 +130,9 @@ class ImageViewerInterface(Protocol):
         raise NotImplementedError
 
     @abstractmethod
-    def add_markers(self, table, x_colname='x', y_colname='y',
-                    skycoord_colname='coord', use_skycoord=False,
-                    marker_name=None):
+    def add_markers(self, table: Table, x_colname: str = 'x', y_colname: str = 'y',
+                    skycoord_colname: str = 'coord', use_skycoord: bool = False,
+                    marker_name: str | None = None) -> None:
         """
         Add markers to the image.
 
@@ -156,7 +164,7 @@ class ImageViewerInterface(Protocol):
     #     raise NotImplementedError
 
     @abstractmethod
-    def reset_markers(self):
+    def reset_markers(self) -> None:
         """
         Remove all markers from the image.
         """
@@ -167,7 +175,7 @@ class ImageViewerInterface(Protocol):
     #     raise NotImplementedError
 
     @abstractmethod
-    def remove_markers(self, marker_name=None):
+    def remove_markers(self, marker_name: str | None = None) -> None:
         """
         Remove markers from the image.
 
@@ -184,9 +192,9 @@ class ImageViewerInterface(Protocol):
     #     raise NotImplementedError
 
     @abstractmethod
-    def get_markers(self, x_colname='x', y_colname='y',
-                    skycoord_colname='coord',
-                    marker_name=None):
+    def get_markers(self, x_colname: str = 'x', y_colname: str = 'y',
+                    skycoord_colname: str = 'coord',
+                    marker_name: str | None = None) -> Table:
         """
         Get the marker positions.
 
@@ -214,7 +222,7 @@ class ImageViewerInterface(Protocol):
 
     # Methods that modify the view
     @abstractmethod
-    def center_on(self, point):
+    def center_on(self, point: tuple | SkyCoord):
         """
         Center the view on the point.
 
@@ -227,14 +235,14 @@ class ImageViewerInterface(Protocol):
         raise NotImplementedError
 
     @abstractmethod
-    def offset_by(self, dx, dy):
+    def offset_by(self, dx: float | Quantity, dy: float | Quantity) -> None:
         """
         Move the center to a point that is given offset
         away from the current center.
 
         Parameters
         ----------
-        dx, dy : float or `~astropy.unit.Quantity`
+        dx, dy : float or `~astropy.units.Quantity`
             Offset value. Without a unit, assumed to be pixel offsets.
             If a unit is attached, offset by pixel or sky is assumed from
             the unit.
@@ -242,7 +250,7 @@ class ImageViewerInterface(Protocol):
         raise NotImplementedError
 
     @abstractmethod
-    def zoom(self):
+    def zoom(self) -> None:
         """
         Zoom in or out by the given factor.
 
