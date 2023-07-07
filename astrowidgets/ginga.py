@@ -980,7 +980,7 @@ class ImageWidget(ipyw.VBox):
 
         Parameters
         ----------
-        filename : str
+        filename : str or `os.PathLike`
             Name of file to save to.
 
         overwrite : bool, optional
