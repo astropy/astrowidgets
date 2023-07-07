@@ -2,6 +2,7 @@
 
 # STDLIB
 import functools
+from pathlib import Path
 import warnings
 
 # THIRD-PARTY
@@ -973,12 +974,23 @@ class ImageWidget(ipyw.VBox):
         else:
             bindmap.map_event(None, (), 'pa_pan', 'zoom')
 
-    def save(self, filename):
+    def save(self, filename, overwrite=False):
         """
         Save out the current image view to given PNG filename.
+
+        Parameters
+        ----------
+        filename : str
+            Name of file to save to.
+
+        overwrite : bool, optional
+            If `True`, overwrite existing file.
         """
         # It turns out the image value is already in PNG format so we just
         # to write that out to a file.
+        if not overwrite and Path.exists(filename):
+            raise FileExistsError(f'File {filename} exists and overwrite=False')
+
         with open(filename, 'wb') as f:
             f.write(self._jup_img.value)
 

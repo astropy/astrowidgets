@@ -90,7 +90,7 @@ class ImageViewerInterface(Protocol):
 
     # Saving contents of the view and accessing the view
     @abstractmethod
-    def save(self, filename: str | os.PathLike) -> None:
+    def save(self, filename: str | os.PathLike, overwrite: bool = False) -> None:
         """
         Save the current view to a file.
 
@@ -99,6 +99,10 @@ class ImageViewerInterface(Protocol):
         filename : str
             The file to save to. The format is determined by the
             extension.
+
+        overwrite : bool, optional
+            If `True`, overwrite the file if it exists. Default is
+            `False`.
         """
         raise NotImplementedError
 

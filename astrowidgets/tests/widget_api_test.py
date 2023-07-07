@@ -359,3 +359,16 @@ class ImageWidgetAPITest:
     def test_save(self, tmp_path):
         filename = tmp_path / 'woot.png'
         self.image.save(filename)
+
+    def test_save_overwrite(self, tmp_path):
+        filename = tmp_path / 'woot.png'
+
+        # First write should be fine
+        self.image.save(filename)
+
+        # Second write should raise an error because file exists
+        with pytest.raises(FileExistsError):
+            self.image.save(filename)
+
+        # Using overwrite should save successfully
+        self.image.save(filename, overwrite=True)
