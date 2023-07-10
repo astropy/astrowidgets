@@ -96,7 +96,7 @@ class ImageViewerInterface(Protocol):
 
         Parameters
         ----------
-        filename : str
+        filename : str or `os.PathLike`
             The file to save to. The format is determined by the
             extension.
 
