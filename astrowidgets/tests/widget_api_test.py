@@ -277,6 +277,16 @@ class ImageWidgetAPITest:
         self.image.remove_markers(marker_name='all')
         assert self.image.get_markers(marker_name='all') is None
 
+    def test_remove_marker_accepts_list(self):
+        rng = np.random.default_rng(1234)
+        data = rng.integers(0, 100, (5, 2))
+        tab = Table(data=data, names=['x', 'y'])
+        self.image.add_markers(tab, marker_name='test1')
+        self.image.add_markers(tab, marker_name='test2')
+
+        self.image.remove_markers(marker_name=['test1', 'test2'])
+        assert self.image.get_markers(marker_name='all') is None
+
     def test_adding_markers_as_world(self, data, wcs):
         ndd = NDData(data=data, wcs=wcs)
         self.image.load_nddata(ndd)
