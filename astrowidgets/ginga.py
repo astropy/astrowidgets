@@ -780,8 +780,9 @@ class ImageWidget(ipyw.VBox):
         Parameters
         ----------
 
-        marker_name : str, optional
-            Name used when the markers were added.
+        marker_name : str, or list of str, optional
+            Name used when the markers were added. The name "all" will
+            remove all markers.
         """
         # TODO:
         #   arr : ``SkyCoord`` or array-like
@@ -792,6 +793,12 @@ class ImageWidget(ipyw.VBox):
 
         if marker_name is None:
             marker_name = self._default_mark_tag_name
+
+        if marker_name == "all":
+            all_markers = self._marktags.copy()
+            for marker in all_markers:
+                self.remove_markers(marker_name=marker)
+            return
 
         if marker_name not in self._marktags:
             # This shouldn't have happened, raise an error

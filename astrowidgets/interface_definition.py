@@ -197,8 +197,8 @@ class ImageViewerInterface(Protocol):
         Parameters
         ----------
         marker_name : str, optional
-            The name of the marker set to remove. If not given, all
-            markers will be removed.
+            The name of the marker set to remove. If the value is ``"all"``,
+            then all markers will be removed.
         """
         raise NotImplementedError
 
