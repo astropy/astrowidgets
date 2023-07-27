@@ -190,7 +190,7 @@ class ImageViewerInterface(Protocol):
     #     raise NotImplementedError
 
     @abstractmethod
-    def remove_markers(self, marker_name: str | None = None) -> None:
+    def remove_markers(self, marker_name: str | list[str] | None = None) -> None:
         """
         Remove markers from the image.
 

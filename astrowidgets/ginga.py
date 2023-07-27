@@ -800,6 +800,12 @@ class ImageWidget(ipyw.VBox):
                 self.remove_markers(marker_name=marker)
             return
 
+        # If not a string assume, marker_name is a list
+        if not isinstance(marker_name, str):
+            for name in marker_name:
+                self.remove_markers(marker_name=name)
+            return
+
         if marker_name not in self._marktags:
             # This shouldn't have happened, raise an error
             raise ValueError('Marker name {} not found in current markers.'
