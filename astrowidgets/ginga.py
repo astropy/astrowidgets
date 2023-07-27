@@ -556,9 +556,9 @@ class ImageWidget(ipyw.VBox):
         # If it isn't a string assume it is a list of strings
         if not isinstance(marker_name, str):
             return vstack([self.get_markers(x_colname=x_colname,
-                                             y_colname=y_colname,
-                                             skycoord_colname=skycoord_colname,
-                                             marker_name=name)
+                                            y_colname=y_colname,
+                                            skycoord_colname=skycoord_colname,
+                                            marker_name=name)
                            for name in marker_name])
 
         if marker_name == 'all':

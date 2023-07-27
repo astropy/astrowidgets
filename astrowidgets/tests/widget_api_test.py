@@ -249,10 +249,8 @@ class ImageWidgetAPITest:
         rng = np.random.default_rng(1234)
         data = rng.integers(0, 100, (5, 2))
         tab = Table(data=data, names=['x', 'y'])
-        self.image.add_markers(tab, x_colname='x', y_colname='y',
-                                 skycoord_colname='coord', marker_name='test1')
-        self.image.add_markers(tab, x_colname='x', y_colname='y',
-                                    skycoord_colname='coord', marker_name='test2')
+        self.image.add_markers(tab, marker_name='test1')
+        self.image.add_markers(tab, marker_name='test2')
 
         # No guarantee markers will come back in the same order, so sort them.
         t1 = self.image.get_markers(marker_name=['test1', 'test2'])
