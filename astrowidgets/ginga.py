@@ -24,7 +24,9 @@ from ginga.util.wcs import ra_deg_to_str, dec_deg_to_str
 
 from astrowidgets.interface_definition import (
     ALLOWED_CURSOR_LOCATIONS,
-    RESERVED_MARKER_SET_NAMES
+    RESERVED_MARKER_SET_NAMES,
+    DEFAULT_MARKER_NAME,
+    DEFAULT_INTERACTIVE_MARKER_NAME
 )
 
 __all__ = ['ImageWidget']
@@ -60,6 +62,12 @@ class ImageWidget(ipyw.VBox):
 
     # List of marker names that are for internal use only
     RESERVED_MARKER_SET_NAMES = RESERVED_MARKER_SET_NAMES
+
+    # Default marker name
+    DEFAULT_MARKER_NAME: str = DEFAULT_MARKER_NAME
+
+    # Default marker name for interactive marking
+    DEFAULT_INTERACTIVE_MARKER_NAME: str = DEFAULT_INTERACTIVE_MARKER_NAME
 
     def __init__(self, logger=None, image_width=500, image_height=500,
                  pixel_coords_offset=0, **kwargs):
@@ -133,8 +141,8 @@ class ImageWidget(ipyw.VBox):
         # duplicate names.
         self._marktags = set()
         # Let's have a default name for the tag too:
-        self._default_mark_tag_name = 'default-marker-name'
-        self._interactive_marker_set_name_default = 'interactive-markers'
+        self._default_mark_tag_name = DEFAULT_MARKER_NAME
+        self._interactive_marker_set_name_default = DEFAULT_INTERACTIVE_MARKER_NAME
         self._interactive_marker_set_name = self._interactive_marker_set_name_default
 
         # coordinates display

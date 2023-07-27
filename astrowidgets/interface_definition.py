@@ -12,13 +12,18 @@ from numpy.typing import ArrayLike
 # Allowed locations for cursor display
 ALLOWED_CURSOR_LOCATIONS = ('top', 'bottom', None)
 
+DEFAULT_MARKER_NAME = 'default-marker-name'
+DEFAULT_INTERACTIVE_MARKER_NAME = 'interactive-markers'
+
 # List of marker names that are for internal use only
 RESERVED_MARKER_SET_NAMES = ('all',)
 
 __all__ = [
     'ImageViewerInterface',
     'ALLOWED_CURSOR_LOCATIONS',
-    'RESERVED_MARKER_SET_NAMES'
+    'RESERVED_MARKER_SET_NAMES',
+    'DEFAULT_MARKER_NAME',
+    'DEFAULT_INTERACTIVE_MARKER_NAME'
 ]
 
 
@@ -47,6 +52,12 @@ class ImageViewerInterface(Protocol):
 
     # List of marker names that are for internal use only
     RESERVED_MARKER_SET_NAMES: tuple = RESERVED_MARKER_SET_NAMES
+
+    # Default marker name
+    DEFAULT_MARKER_NAME: str = DEFAULT_MARKER_NAME
+
+    # Default marker name for interactive marking
+    DEFAULT_INTERACTIVE_MARKER_NAME: str = DEFAULT_INTERACTIVE_MARKER_NAME
 
     # The methods, grouped loosely by purpose
 
