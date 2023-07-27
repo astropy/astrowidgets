@@ -243,6 +243,26 @@ class ImageWidgetAPITest:
         with pytest.raises(ValueError, match="No markers named 'test2'"):
             self.image.get_markers(marker_name='test2')
 
+    def test_get_markers_accepts_list_of_names(self):
+        # Check that the get_markers method accepts a list of marker names
+        # and returns a table with all the markers from all the named sets.
+        rng = np.random.default_rng(1234)
+        data = rng.integers(0, 100, (5, 2))
+        tab = Table(data=data, names=['x', 'y'])
+        self.image.add_markers(tab, x_colname='x', y_colname='y',
+                                 skycoord_colname='coord', marker_name='test1')
+        self.image.add_markers(tab, x_colname='x', y_colname='y',
+                                    skycoord_colname='coord', marker_name='test2')
+
+        # No guarantee markers will come back in the same order, so sort them.
+        t1 = self.image.get_markers(marker_name=['test1', 'test2'])
+        # Sort before comparing
+        t1.sort('x')
+        expected = vstack([tab, tab], join_type='exact')
+        expected.sort('x')
+        assert np.all(t1['x'] == expected['x'])
+        assert (t1['y'] == expected['y']).all()
+
     def test_remove_markers(self):
         with pytest.raises(ValueError, match='arf'):
             self.image.remove_markers(marker_name='arf')

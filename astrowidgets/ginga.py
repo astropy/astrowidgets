@@ -553,6 +553,14 @@ class ImageWidget(ipyw.VBox):
         if marker_name is None:
             marker_name = self._default_mark_tag_name
 
+        # If it isn't a string assume it is a list of strings
+        if not isinstance(marker_name, str):
+            return vstack([self.get_markers(x_colname=x_colname,
+                                             y_colname=y_colname,
+                                             skycoord_colname=skycoord_colname,
+                                             marker_name=name)
+                           for name in marker_name])
+
         if marker_name == 'all':
             # If it wasn't for the fact that SKyCoord columns can't
             # be stacked this would all fit nicely into a list

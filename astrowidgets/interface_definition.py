@@ -209,7 +209,7 @@ class ImageViewerInterface(Protocol):
     @abstractmethod
     def get_markers(self, x_colname: str = 'x', y_colname: str = 'y',
                     skycoord_colname: str = 'coord',
-                    marker_name: str | None = None) -> Table:
+                    marker_name: str | list[str] | None = None) -> Table:
         """
         Get the marker positions.
 
@@ -224,9 +224,9 @@ class ImageViewerInterface(Protocol):
         skycoord_colname : str, optional
             The name of the column containing the sky coordinates. Default
             is ``'coord'``.
-        marker_name : str, optional
-            The name of the marker set to use. If not given, all
-            markers will be returned.
+        marker_name : str or list of str, optional
+            The name of the marker set to use. If that value is ``"all"``,
+            then all markers will be returned.
 
         Returns
         -------
