@@ -246,8 +246,7 @@ class ImageWidgetAPITest:
     def test_get_markers_accepts_list_of_names(self):
         # Check that the get_markers method accepts a list of marker names
         # and returns a table with all the markers from all the named sets.
-        rng = np.random.default_rng(1234)
-        data = rng.integers(0, 100, (5, 2))
+        data = np.arange(10).reshape((5, 2))
         tab = Table(data=data, names=['x', 'y'])
         self.image.add_markers(tab, marker_name='test1')
         self.image.add_markers(tab, marker_name='test2')
