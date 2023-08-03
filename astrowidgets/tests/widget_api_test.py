@@ -258,8 +258,8 @@ class ImageWidgetAPITest:
         t1.sort('x')
         expected = vstack([tab, tab], join_type='exact')
         expected.sort('x')
-        assert np.all(t1['x'] == expected['x'])
-        assert (t1['y'] == expected['y']).all()
+        np.testing.assert_array_equal(t1['x'], expected['x'])
+        np.testing.assert_array_equal(t1['y'], expected['y'])
 
     def test_remove_markers(self):
         with pytest.raises(ValueError, match='arf'):
