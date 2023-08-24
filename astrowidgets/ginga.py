@@ -587,7 +587,8 @@ class ImageWidget(ipyw.VBox):
                 tables.append(table)
 
             if len(tables) == 0:
-                return None
+                # No markers at all, return an empty table
+                return Table()
 
             stacked = vstack(tables, join_type='exact')
 
