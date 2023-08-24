@@ -282,7 +282,8 @@ class ImageWidgetAPITest:
         self.image.add_markers(tab, marker_name='test2')
 
         self.image.remove_markers(marker_name=['test1', 'test2'])
-        assert self.image.get_markers(marker_name='all') is None
+        marks = self.image.get_markers(marker_name='all')
+        assert isinstance(marks, Table) and len(marks) == 0
 
     def test_adding_markers_as_world(self, data, wcs):
         ndd = NDData(data=data, wcs=wcs)

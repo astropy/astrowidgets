@@ -231,7 +231,8 @@ class ImageViewerInterface(Protocol):
         Returns
         -------
         table : `astropy.table.Table`
-            The table containing the marker positions.
+            The table containing the marker positions. If no markers match the
+            ``marker_name`` parameter, an empty table is returned.
         """
         raise NotImplementedError
 
