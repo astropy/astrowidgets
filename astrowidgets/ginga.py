@@ -550,6 +550,10 @@ class ImageWidget(ipyw.VBox):
             Table of markers, if any, or ``None``.
 
         """
+        default_column_names = [x_colname, y_colname, skycoord_colname, 'marker name']
+
+        empty_table = Table(names=default_column_names)
+
         if marker_name is None:
             marker_name = self._default_mark_tag_name
 
@@ -574,7 +578,7 @@ class ImageWidget(ipyw.VBox):
                                          y_colname=y_colname,
                                          skycoord_colname=skycoord_colname,
                                          marker_name=name)
-                if table is None:
+                if len(table) == 0:
                     # No markers by this name, skip it
                     continue
 
@@ -588,7 +592,7 @@ class ImageWidget(ipyw.VBox):
 
             if len(tables) == 0:
                 # No markers at all, return an empty table
-                return Table()
+                return empty_table
 
             stacked = vstack(tables, join_type='exact')
 
@@ -601,15 +605,13 @@ class ImageWidget(ipyw.VBox):
         # where that table is empty will be handled in a moment.
         if (marker_name not in self._marktags
                 and marker_name != self._default_mark_tag_name):
-            raise ValueError(f"No markers named '{marker_name}' found.")
+            return empty_table
 
         try:
             c_mark = self._viewer.canvas.get_object_by_tag(marker_name)
-        except Exception:
-            # No markers in this table. Issue a warning and continue
-            warnings.warn(f"Marker set named '{marker_name}' is empty",
-                          category=UserWarning)
-            return None
+        except Exception:  # Keep this broad -- unclear what exceptions can be raised
+            # No markers in this table.
+            return empty_table
 
         image = self._viewer.get_image()
         xy_col = []
