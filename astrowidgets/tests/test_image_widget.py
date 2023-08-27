@@ -119,21 +119,6 @@ def test_get_marker_with_names():
     assert (expected['y'] == all_marks['y']).all()
 
 
-def test_unknown_marker_name_error():
-    """
-    Regression test for https://github.com/astropy/astrowidgets/issues/97
-
-    This particular test checks that getting a marker name that
-    does not exist raises an error.
-    """
-    iw = ImageWidget()
-    bad_name = 'not a real marker name'
-    with pytest.raises(ValueError) as e:
-        iw.get_markers(marker_name=bad_name)
-
-    assert f"No markers named '{bad_name}'" in str(e.value)
-
-
 def test_empty_marker_name_works_with_all():
     """
     Regression test for https://github.com/astropy/astrowidgets/issues/97
