@@ -1,6 +1,5 @@
 import re
 
-import pytest
 import numpy as np
 from astropy.table import Table, vstack
 from astropy.wcs import WCS
