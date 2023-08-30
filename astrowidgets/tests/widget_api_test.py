@@ -177,8 +177,7 @@ class ImageWidgetAPITest:
         assert self.image.click_drag
 
     def test_add_markers(self):
-        rng = np.random.default_rng(1234)
-        data = rng.integers(0, 100, (5, 2))
+        data = np.arange(10).reshape(5, 2)
         orig_tab = Table(data=data, names=['x', 'y'], dtype=('float', 'float'))
         tab = Table(data=data, names=['x', 'y'], dtype=('float', 'float'))
         self.image.add_markers(tab, x_colname='x', y_colname='y',
@@ -273,8 +272,7 @@ class ImageWidgetAPITest:
             self.image.remove_markers(marker_name='arf')
 
     def test_remove_markers_name_all(self):
-        rng = np.random.default_rng(1234)
-        data = rng.integers(0, 100, (5, 2))
+        data = np.arange(10).reshape(5, 2)
         tab = Table(data=data, names=['x', 'y'])
         self.image.add_markers(tab, marker_name='test1')
         self.image.add_markers(tab, marker_name='test2')
@@ -283,8 +281,7 @@ class ImageWidgetAPITest:
         self._check_marker_table_return_properties(self.image.get_markers(marker_name='all'))
 
     def test_remove_marker_accepts_list(self):
-        rng = np.random.default_rng(1234)
-        data = rng.integers(0, 100, (5, 2))
+        data = np.arange(10).reshape(5, 2)
         tab = Table(data=data, names=['x', 'y'])
         self.image.add_markers(tab, marker_name='test1')
         self.image.add_markers(tab, marker_name='test2')
@@ -298,9 +295,7 @@ class ImageWidgetAPITest:
         self.image.load_nddata(ndd)
 
         # Add markers using world coordinates
-        rng = np.random.default_rng(9435)
-
-        pixels = rng.integers(0, 100, (5, 2))
+        pixels = np.linspace(0, 100, num=10).reshape(5, 2)
         marks_pix = Table(data=pixels, names=['x', 'y'], dtype=('float', 'float'))
         marks_world = wcs.pixel_to_world(marks_pix['x'], marks_pix['y'])
         marks_coords = SkyCoord(marks_world, unit='degree')
