@@ -63,7 +63,7 @@ class ImageWidget(ipyw.VBox):
     # List of marker names that are for internal use only
     RESERVED_MARKER_SET_NAMES = RESERVED_MARKER_SET_NAMES
 
-    # Default marker name
+    # Default marker name for marking via API
     DEFAULT_MARKER_NAME: str = DEFAULT_MARKER_NAME
 
     # Default marker name for interactive marking
