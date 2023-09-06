@@ -24,7 +24,9 @@ from ginga.util.wcs import ra_deg_to_str, dec_deg_to_str
 
 from astrowidgets.interface_definition import (
     ALLOWED_CURSOR_LOCATIONS,
-    RESERVED_MARKER_SET_NAMES
+    RESERVED_MARKER_SET_NAMES,
+    DEFAULT_MARKER_NAME,
+    DEFAULT_INTERACTIVE_MARKER_NAME
 )
 
 __all__ = ['ImageWidget']
@@ -60,6 +62,12 @@ class ImageWidget(ipyw.VBox):
 
     # List of marker names that are for internal use only
     RESERVED_MARKER_SET_NAMES = RESERVED_MARKER_SET_NAMES
+
+    # Default marker name for marking via API
+    DEFAULT_MARKER_NAME: str = DEFAULT_MARKER_NAME
+
+    # Default marker name for interactive marking
+    DEFAULT_INTERACTIVE_MARKER_NAME: str = DEFAULT_INTERACTIVE_MARKER_NAME
 
     def __init__(self, logger=None, image_width=500, image_height=500,
                  pixel_coords_offset=0, **kwargs):
@@ -133,8 +141,8 @@ class ImageWidget(ipyw.VBox):
         # duplicate names.
         self._marktags = set()
         # Let's have a default name for the tag too:
-        self._default_mark_tag_name = 'default-marker-name'
-        self._interactive_marker_set_name_default = 'interactive-markers'
+        self._default_mark_tag_name = DEFAULT_MARKER_NAME
+        self._interactive_marker_set_name_default = DEFAULT_INTERACTIVE_MARKER_NAME
         self._interactive_marker_set_name = self._interactive_marker_set_name_default
 
         # coordinates display
@@ -542,8 +550,20 @@ class ImageWidget(ipyw.VBox):
             Table of markers, if any, or ``None``.
 
         """
+        default_column_names = [x_colname, y_colname, skycoord_colname, 'marker name']
+
+        empty_table = Table(names=default_column_names)
+
         if marker_name is None:
             marker_name = self._default_mark_tag_name
+
+        # If it isn't a string assume it is a list of strings
+        if not isinstance(marker_name, str):
+            return vstack([self.get_markers(x_colname=x_colname,
+                                            y_colname=y_colname,
+                                            skycoord_colname=skycoord_colname,
+                                            marker_name=name)
+                           for name in marker_name])
 
         if marker_name == 'all':
             # If it wasn't for the fact that SKyCoord columns can't
@@ -558,7 +578,7 @@ class ImageWidget(ipyw.VBox):
                                          y_colname=y_colname,
                                          skycoord_colname=skycoord_colname,
                                          marker_name=name)
-                if table is None:
+                if len(table) == 0:
                     # No markers by this name, skip it
                     continue
 
@@ -571,7 +591,8 @@ class ImageWidget(ipyw.VBox):
                 tables.append(table)
 
             if len(tables) == 0:
-                return None
+                # No markers at all, return an empty table
+                return empty_table
 
             stacked = vstack(tables, join_type='exact')
 
@@ -584,15 +605,13 @@ class ImageWidget(ipyw.VBox):
         # where that table is empty will be handled in a moment.
         if (marker_name not in self._marktags
                 and marker_name != self._default_mark_tag_name):
-            raise ValueError(f"No markers named '{marker_name}' found.")
+            return empty_table
 
         try:
             c_mark = self._viewer.canvas.get_object_by_tag(marker_name)
-        except Exception:
-            # No markers in this table. Issue a warning and continue
-            warnings.warn(f"Marker set named '{marker_name}' is empty",
-                          category=UserWarning)
-            return None
+        except Exception:  # Keep this broad -- unclear what exceptions can be raised
+            # No markers in this table.
+            return empty_table
 
         image = self._viewer.get_image()
         xy_col = []
@@ -764,8 +783,9 @@ class ImageWidget(ipyw.VBox):
         Parameters
         ----------
 
-        marker_name : str, optional
-            Name used when the markers were added.
+        marker_name : str, or list of str, optional
+            Name used when the markers were added. The name "all" will
+            remove all markers.
         """
         # TODO:
         #   arr : ``SkyCoord`` or array-like
@@ -776,6 +796,18 @@ class ImageWidget(ipyw.VBox):
 
         if marker_name is None:
             marker_name = self._default_mark_tag_name
+
+        if marker_name == "all":
+            all_markers = self._marktags.copy()
+            for marker in all_markers:
+                self.remove_markers(marker_name=marker)
+            return
+
+        # If not a string assume, marker_name is a list
+        if not isinstance(marker_name, str):
+            for name in marker_name:
+                self.remove_markers(marker_name=name)
+            return
 
         if marker_name not in self._marktags:
             # This shouldn't have happened, raise an error

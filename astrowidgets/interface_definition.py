@@ -12,13 +12,18 @@ from numpy.typing import ArrayLike
 # Allowed locations for cursor display
 ALLOWED_CURSOR_LOCATIONS = ('top', 'bottom', None)
 
+DEFAULT_MARKER_NAME = 'default-marker-name'
+DEFAULT_INTERACTIVE_MARKER_NAME = 'interactive-markers'
+
 # List of marker names that are for internal use only
 RESERVED_MARKER_SET_NAMES = ('all',)
 
 __all__ = [
     'ImageViewerInterface',
     'ALLOWED_CURSOR_LOCATIONS',
-    'RESERVED_MARKER_SET_NAMES'
+    'RESERVED_MARKER_SET_NAMES',
+    'DEFAULT_MARKER_NAME',
+    'DEFAULT_INTERACTIVE_MARKER_NAME'
 ]
 
 
@@ -47,6 +52,12 @@ class ImageViewerInterface(Protocol):
 
     # List of marker names that are for internal use only
     RESERVED_MARKER_SET_NAMES: tuple = RESERVED_MARKER_SET_NAMES
+
+    # Default marker name for marking via API
+    DEFAULT_MARKER_NAME: str = DEFAULT_MARKER_NAME
+
+    # Default marker name for interactive marking
+    DEFAULT_INTERACTIVE_MARKER_NAME: str = DEFAULT_INTERACTIVE_MARKER_NAME
 
     # The methods, grouped loosely by purpose
 
@@ -179,15 +190,15 @@ class ImageViewerInterface(Protocol):
     #     raise NotImplementedError
 
     @abstractmethod
-    def remove_markers(self, marker_name: str | None = None) -> None:
+    def remove_markers(self, marker_name: str | list[str] | None = None) -> None:
         """
         Remove markers from the image.
 
         Parameters
         ----------
         marker_name : str, optional
-            The name of the marker set to remove. If not given, all
-            markers will be removed.
+            The name of the marker set to remove. If the value is ``"all"``,
+            then all markers will be removed.
         """
         raise NotImplementedError
 
@@ -198,7 +209,7 @@ class ImageViewerInterface(Protocol):
     @abstractmethod
     def get_markers(self, x_colname: str = 'x', y_colname: str = 'y',
                     skycoord_colname: str = 'coord',
-                    marker_name: str | None = None) -> Table:
+                    marker_name: str | list[str] | None = None) -> Table:
         """
         Get the marker positions.
 
@@ -213,14 +224,15 @@ class ImageViewerInterface(Protocol):
         skycoord_colname : str, optional
             The name of the column containing the sky coordinates. Default
             is ``'coord'``.
-        marker_name : str, optional
-            The name of the marker set to use. If not given, all
-            markers will be returned.
+        marker_name : str or list of str, optional
+            The name of the marker set to use. If that value is ``"all"``,
+            then all markers will be returned.
 
         Returns
         -------
         table : `astropy.table.Table`
-            The table containing the marker positions.
+            The table containing the marker positions. If no markers match the
+            ``marker_name`` parameter, an empty table is returned.
         """
         raise NotImplementedError
 
