@@ -303,7 +303,10 @@ class ImageWidgetAPITest:
         self.image.add_markers(mark_coord_table, use_skycoord=True)
         result = self.image.get_markers()
         # Check the x, y positions as long as we are testing things...
-        np.testing.assert_allclose(result['x'], marks_pix['x'])
+        # The first test had one entry that was zero, so any check
+        # based on rtol will will. Added a small atol to make sure
+        # the test passes.
+        np.testing.assert_allclose(result['x'], marks_pix['x'], atol=1e-9)
         np.testing.assert_allclose(result['y'], marks_pix['y'])
         np.testing.assert_allclose(result['coord'].ra.deg,
                                    mark_coord_table['coord'].ra.deg)
