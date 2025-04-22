@@ -1,4 +1,5 @@
 # TODO: How to enable switching out backend and still run the same tests?
+import warnings
 
 import pytest
 
@@ -45,6 +46,11 @@ class ImageWidgetAPITest:
         class variable does the trick.
         """
         self.image = self.image_widget_class(image_width=250, image_height=100)
+
+    def _check_marker_table_return_properties(self, table):
+        assert isinstance(table, Table)
+        assert len(table) == 0
+        assert sorted(table.colnames) == sorted(['x', 'y', 'coord', 'marker name'])
 
     def test_width_height(self):
         assert self.image.image_width == 250
@@ -103,7 +109,7 @@ class ImageWidgetAPITest:
 
     def test_marking_operations(self):
         marks = self.image.get_markers(marker_name="all")
-        assert marks is None
+        self._check_marker_table_return_properties(marks)
         assert not self.image.is_marking
 
         # Ensure you cannot set it like this.
@@ -138,12 +144,13 @@ class ImageWidgetAPITest:
         assert not self.image.click_drag
         assert not self.image.scroll_pan
 
-        # Regression test for GitHub Issue 97:
-        # Marker name with no markers should give warning.
-        with pytest.warns(UserWarning, match='is empty') as warning_lines:
+        # Make sure no warning is issued when trying to retrieve markers
+        # with a name that does not exist.
+        with warnings.catch_warnings():
+            warnings.simplefilter("error")
             t = self.image.get_markers(marker_name='markymark')
-        assert t is None
-        assert len(warning_lines) == 1
+
+        self._check_marker_table_return_properties(t)
 
         self.image.click_drag = True
         self.image.start_marking()
@@ -160,7 +167,7 @@ class ImageWidgetAPITest:
         self.image.stop_marking(clear_markers=True)
 
         assert self.image.is_marking is False
-        assert self.image.get_markers(marker_name="all") is None
+        self._check_marker_table_return_properties(self.image.get_markers(marker_name="all"))
 
         # Hate this, should add to public API
         marknames = self.image._marktags
@@ -170,8 +177,7 @@ class ImageWidgetAPITest:
         assert self.image.click_drag
 
     def test_add_markers(self):
-        rng = np.random.default_rng(1234)
-        data = rng.integers(0, 100, (5, 2))
+        data = np.arange(10).reshape(5, 2)
         orig_tab = Table(data=data, names=['x', 'y'], dtype=('float', 'float'))
         tab = Table(data=data, names=['x', 'y'], dtype=('float', 'float'))
         self.image.add_markers(tab, x_colname='x', y_colname='y',
@@ -234,27 +240,62 @@ class ImageWidgetAPITest:
         self.image.reset_markers()
         marknames = self.image._marktags
         assert len(marknames) == 0
-        assert self.image.get_markers(marker_name="all") is None
-        with pytest.warns(UserWarning, match='is empty'):
-            assert self.image.get_markers(marker_name=self.image._default_mark_tag_name) is None
+        self._check_marker_table_return_properties(self.image.get_markers(marker_name="all"))
+        # Check that no markers remain after clearing
+        tab = self.image.get_markers(marker_name=self.image._default_mark_tag_name)
+        self._check_marker_table_return_properties(tab)
 
-        with pytest.raises(ValueError, match="No markers named 'test1'"):
-            self.image.get_markers(marker_name='test1')
-        with pytest.raises(ValueError, match="No markers named 'test2'"):
-            self.image.get_markers(marker_name='test2')
+        # Check that retrieving a marker set that doesn't exist returns
+        # an empty table with the right columns
+        tab = self.image.get_markers(marker_name='test1')
+        self._check_marker_table_return_properties(tab)
+
+    def test_get_markers_accepts_list_of_names(self):
+        # Check that the get_markers method accepts a list of marker names
+        # and returns a table with all the markers from all the named sets.
+        data = np.arange(10).reshape((5, 2))
+        tab = Table(data=data, names=['x', 'y'])
+        self.image.add_markers(tab, marker_name='test1')
+        self.image.add_markers(tab, marker_name='test2')
+
+        # No guarantee markers will come back in the same order, so sort them.
+        t1 = self.image.get_markers(marker_name=['test1', 'test2'])
+        # Sort before comparing
+        t1.sort('x')
+        expected = vstack([tab, tab], join_type='exact')
+        expected.sort('x')
+        np.testing.assert_array_equal(t1['x'], expected['x'])
+        np.testing.assert_array_equal(t1['y'], expected['y'])
 
     def test_remove_markers(self):
         with pytest.raises(ValueError, match='arf'):
             self.image.remove_markers(marker_name='arf')
+
+    def test_remove_markers_name_all(self):
+        data = np.arange(10).reshape(5, 2)
+        tab = Table(data=data, names=['x', 'y'])
+        self.image.add_markers(tab, marker_name='test1')
+        self.image.add_markers(tab, marker_name='test2')
+
+        self.image.remove_markers(marker_name='all')
+        self._check_marker_table_return_properties(self.image.get_markers(marker_name='all'))
+
+    def test_remove_marker_accepts_list(self):
+        data = np.arange(10).reshape(5, 2)
+        tab = Table(data=data, names=['x', 'y'])
+        self.image.add_markers(tab, marker_name='test1')
+        self.image.add_markers(tab, marker_name='test2')
+
+        self.image.remove_markers(marker_name=['test1', 'test2'])
+        marks = self.image.get_markers(marker_name='all')
+        self._check_marker_table_return_properties(marks)
 
     def test_adding_markers_as_world(self, data, wcs):
         ndd = NDData(data=data, wcs=wcs)
         self.image.load_nddata(ndd)
 
         # Add markers using world coordinates
-        rng = np.random.default_rng(9435)
-
-        pixels = rng.integers(0, 100, (5, 2))
+        pixels = np.linspace(0, 100, num=10).reshape(5, 2)
         marks_pix = Table(data=pixels, names=['x', 'y'], dtype=('float', 'float'))
         marks_world = wcs.pixel_to_world(marks_pix['x'], marks_pix['y'])
         marks_coords = SkyCoord(marks_world, unit='degree')
@@ -262,7 +303,10 @@ class ImageWidgetAPITest:
         self.image.add_markers(mark_coord_table, use_skycoord=True)
         result = self.image.get_markers()
         # Check the x, y positions as long as we are testing things...
-        np.testing.assert_allclose(result['x'], marks_pix['x'])
+        # The first test had one entry that was zero, so any check
+        # based on rtol will will. Added a small atol to make sure
+        # the test passes.
+        np.testing.assert_allclose(result['x'], marks_pix['x'], atol=1e-9)
         np.testing.assert_allclose(result['y'], marks_pix['y'])
         np.testing.assert_allclose(result['coord'].ra.deg,
                                    mark_coord_table['coord'].ra.deg)
