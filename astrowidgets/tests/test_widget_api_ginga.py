@@ -1,7 +1,7 @@
 import pytest
 
-from .widget_api_test import ImageWidgetAPITest
-from astrowidgets.interface_definition import ImageViewerInterface
+from astro_image_display_api import ImageWidgetAPITest
+from astro_image_display_api import ImageViewerInterface
 
 ginga = pytest.importorskip("ginga",
                             reason="Package required for test is not "
