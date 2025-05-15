@@ -389,7 +389,7 @@ class ImageWidget(ipyw.VBox):
         dy_val, dy_coord = _offset_is_pixel_or_sky(dy)
 
         if dx_coord != dy_coord:
-            raise ValueError(f'dx is of type {dx_coord} but dy is of type {dy_coord}')
+            raise u.UnitConversionError(f'dx is of type {dx_coord} but dy is of type {dy_coord} and they are not convertible.')
 
         pan_x, pan_y = self._viewer.get_pan(coord=dx_coord)
         self._viewer.set_pan(pan_x + dx_val, pan_y + dy_val, coord=dx_coord)
@@ -943,7 +943,7 @@ class ImageWidget(ipyw.VBox):
         if not isinstance(val, bool):
             raise ValueError('Must be True or False')
         elif self.is_marking and val:
-            raise ValueError('Cannot set to True while in marking mode')
+            raise ValueError('Cannot set to True while marking is active')
 
         if val:
             self.click_drag = False
