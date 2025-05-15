@@ -22,12 +22,7 @@ from ginga.canvas.CanvasObject import drawCatalog
 from ginga.web.jupyterw.ImageViewJpw import EnhancedCanvasView
 from ginga.util.wcs import ra_deg_to_str, dec_deg_to_str
 
-from astrowidgets.interface_definition import (
-    ALLOWED_CURSOR_LOCATIONS,
-    RESERVED_MARKER_SET_NAMES,
-    DEFAULT_MARKER_NAME,
-    DEFAULT_INTERACTIVE_MARKER_NAME
-)
+from astro_image_display_api import ImageViewerInterface
 
 __all__ = ['ImageWidget']
 
@@ -58,16 +53,16 @@ class ImageWidget(ipyw.VBox):
 
     """
     # Allowed locations for cursor display
-    ALLOWED_CURSOR_LOCATIONS = ALLOWED_CURSOR_LOCATIONS
+    ALLOWED_CURSOR_LOCATIONS = ImageViewerInterface.ALLOWED_CURSOR_LOCATIONS
 
     # List of marker names that are for internal use only
-    RESERVED_MARKER_SET_NAMES = RESERVED_MARKER_SET_NAMES
+    RESERVED_MARKER_SET_NAMES = ImageViewerInterface.RESERVED_MARKER_SET_NAMES
 
     # Default marker name for marking via API
-    DEFAULT_MARKER_NAME: str = DEFAULT_MARKER_NAME
+    DEFAULT_MARKER_NAME: str = ImageViewerInterface.DEFAULT_MARKER_NAME
 
     # Default marker name for interactive marking
-    DEFAULT_INTERACTIVE_MARKER_NAME: str = DEFAULT_INTERACTIVE_MARKER_NAME
+    DEFAULT_INTERACTIVE_MARKER_NAME: str = ImageViewerInterface.DEFAULT_INTERACTIVE_MARKER_NAME
 
     def __init__(self, logger=None, image_width=500, image_height=500,
                  pixel_coords_offset=0, **kwargs):
@@ -141,8 +136,8 @@ class ImageWidget(ipyw.VBox):
         # duplicate names.
         self._marktags = set()
         # Let's have a default name for the tag too:
-        self._default_mark_tag_name = DEFAULT_MARKER_NAME
-        self._interactive_marker_set_name_default = DEFAULT_INTERACTIVE_MARKER_NAME
+        self._default_mark_tag_name = ImageViewerInterface.DEFAULT_MARKER_NAME
+        self._interactive_marker_set_name_default = ImageViewerInterface.DEFAULT_INTERACTIVE_MARKER_NAME
         self._interactive_marker_set_name = self._interactive_marker_set_name_default
 
         # coordinates display
@@ -394,7 +389,7 @@ class ImageWidget(ipyw.VBox):
         dy_val, dy_coord = _offset_is_pixel_or_sky(dy)
 
         if dx_coord != dy_coord:
-            raise ValueError(f'dx is of type {dx_coord} but dy is of type {dy_coord}')
+            raise u.UnitConversionError(f'dx is of type {dx_coord} but dy is of type {dy_coord} and they are not convertible.')
 
         pan_x, pan_y = self._viewer.get_pan(coord=dx_coord)
         self._viewer.set_pan(pan_x + dx_val, pan_y + dy_val, coord=dx_coord)
@@ -948,7 +943,7 @@ class ImageWidget(ipyw.VBox):
         if not isinstance(val, bool):
             raise ValueError('Must be True or False')
         elif self.is_marking and val:
-            raise ValueError('Cannot set to True while in marking mode')
+            raise ValueError('Cannot set to True while marking is active')
 
         if val:
             self.click_drag = False
