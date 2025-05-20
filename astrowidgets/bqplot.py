@@ -6,10 +6,9 @@ import numpy as np
 from astropy.coordinates import SkyCoord, SkyOffsetFrame
 from astropy.io import fits
 from astropy.nddata import CCDData
-from astropy.table import Table, vstack
+from astropy.table import Table
 from astropy import units as u
 import astropy.visualization as apviz
-from astropy.wcs import WCS
 
 from bqplot import Figure, LinearScale, Axis, ColorScale, PanZoom, ScatterGL
 from bqplot_image_gl import ImageGL
@@ -18,19 +17,27 @@ from bqplot_image_gl.interacts import (MouseInteraction,
 
 import ipywidgets as ipw
 
-from matplotlib import cm as cmp
 from matplotlib import pyplot
 from matplotlib.colors import to_hex
 
+from astro_image_display_api import ImageViewerInterface
+
 import traitlets as trait
 
-from .helpers import _offset_is_pixel_or_sky
 
-# Allowed locations for cursor display
-ALLOWED_CURSOR_LOCATIONS = ['top', 'bottom', None]
+def _offset_is_pixel_or_sky(x):
+    if isinstance(x, u.Quantity):
+        if x.unit in (u.dimensionless_unscaled, u.pix):
+            coord = 'data'
+            val = x.value
+        else:
+            coord = 'wcs'
+            val = x.to_value(u.deg)
+    else:
+        coord = 'data'
+        val = x
 
-# List of marker names that are for internal use only
-RESERVED_MARKER_SET_NAMES = ['all']
+    return val, coord
 
 
 class _AstroImage(ipw.VBox):
@@ -293,7 +300,7 @@ def bqcolors(colormap, reverse=False):
     LEVELS = 256
 
     # Make a matplotlib colormap object
-    mpl = cmp.get_cmap(colormap, LEVELS)
+    mpl = pyplot.get_cmap(colormap, LEVELS)
 
     # Get RGBA colors
     mpl_colors = mpl(np.linspace(0, 1, LEVELS))
@@ -391,12 +398,21 @@ class ImageWidget(ipw.VBox):
     zoom_level = trait.Float(help="Current zoom of the view").tag(sync=True)
     marker = trait.Any(help="Markers").tag(sync=True)
     cuts = trait.Any(help="Cut levels", allow_none=True).tag(sync=False)
-    cursor = trait.Enum(ALLOWED_CURSOR_LOCATIONS, default_value='bottom',
+    cursor = trait.Enum(ImageViewerInterface.ALLOWED_CURSOR_LOCATIONS, default_value='bottom',
                         help='Whether and where to display cursor position').tag(sync=True)
     stretch = trait.Unicode(help='Stretch algorithm name', allow_none=True).tag(sync=True)
 
     # Leave this in since the API seems to call for it
-    ALLOWED_CURSOR_LOCATIONS = ALLOWED_CURSOR_LOCATIONS
+    ALLOWED_CURSOR_LOCATIONS = ImageViewerInterface.ALLOWED_CURSOR_LOCATIONS
+
+    RESERVED_MARKER_SET_NAMES = trait.List(
+        trait.Unicode(),
+        default_value=ImageViewerInterface.RESERVED_MARKER_SET_NAMES,
+        help="Reserved marker set names"
+    ).tag(sync=True)
+
+    DEFAULT_MARKER_NAME = ImageViewerInterface.DEFAULT_MARKER_NAME
+    DEFAULT_INTERACTIVE_MARKER_NAME = ImageViewerInterface.DEFAULT_INTERACTIVE_MARKER_NAME
 
     def __init__(self, *args, image_width=500, image_height=500):
         super().__init__(*args)

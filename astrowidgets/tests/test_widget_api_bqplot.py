@@ -2,13 +2,17 @@ import pytest
 
 from traitlets import TraitError
 
-from .widget_api_test import ImageWidgetAPITest
+from astro_image_display_api import ImageWidgetAPITest
+from astro_image_display_api import ImageViewerInterface
 
 _ = pytest.importorskip("bqplot",
                         reason="Package required for test is not "
                                "available.")
 from astrowidgets.bqplot import ImageWidget  # noqa: E402
 
+def test_instance():
+    image = ImageWidget()
+    assert isinstance(image, ImageViewerInterface)
 
 class TestBQplotWidget(ImageWidgetAPITest):
     image_widget_class = ImageWidget
@@ -16,5 +20,5 @@ class TestBQplotWidget(ImageWidgetAPITest):
 
     @pytest.mark.skip(reason="Saving is done in javascript and requires "
                              "a running browser.")
-    def test_save(self, tmpdir):
+    def test_save(self, tmp_path):
         pass
