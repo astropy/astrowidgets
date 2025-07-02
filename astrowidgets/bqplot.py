@@ -1,11 +1,10 @@
 from pathlib import Path
-import warnings
 
 import numpy as np
 
 from astropy.coordinates import SkyCoord, SkyOffsetFrame
 from astropy.io import fits
-from astropy.nddata import CCDData
+from astropy.nddata import CCDData, NDData
 from astropy.table import Table
 from astropy import units as u
 import astropy.visualization as apviz
@@ -279,10 +278,17 @@ class _AstroImage(ipw.VBox):
         self._update_marks()
 
     def remove_named_markers(self, mark_id):
-        try:
-            del self._scatter_marks[mark_id]
-        except KeyError:
-            raise ValueError(f'Markers {mark_id} are not present.')
+        if isinstance(mark_id, str):
+            if mark_id == 'all':
+                self.remove_markers()
+                return
+            else:
+                mark_id = [mark_id]
+        for m_id in mark_id:
+            try:
+                del self._scatter_marks[m_id]
+            except KeyError:
+                raise ValueError(f'Markers {m_id} are not present.')
 
         self._update_marks()
 
@@ -323,7 +329,7 @@ class MarkerTableManager:
         # These column names are for internal use.
         self._xcol = 'x'
         self._ycol = 'y'
-        self._names = 'name'
+        self._names = 'marker name'
         self._marktags = set()
         # Let's have a default name for the tag too:
         self.default_mark_tag_name = 'default-marker-name'
@@ -361,17 +367,36 @@ class MarkerTableManager:
         for x, y in zip(x_mark, y_mark):
             self._table.add_row([x, y, marker_name])
 
-    def get_markers_by_name(self, marker_name):
-        matches = self._table[self._names] == marker_name
-        return self._table[matches]
+    def get_markers(self, marker_name):
+        if isinstance(marker_name, str):
+            if marker_name == 'all':
+                return self._table.copy()
+            else:
+                marker_name = [marker_name]
+
+        row_mask = np.zeros(len(self._table), dtype=bool)
+        for name in marker_name:
+            row_mask |= self._table[self._names] == name
+
+        return self._table[row_mask]
 
     def get_all_markers(self):
         return self._table.copy()
 
-    def remove_markers_by_name(self, marker_name):
-        matches = self._table[self._names] == marker_name
+    def remove_markers(self, marker_name):
+        if isinstance(marker_name, str):
+            if marker_name == 'all':
+                self.remove_all_markers()
+                return
+            else:
+                marker_name = [marker_name]
+
+        to_delete = np.zeros(len(self._table), dtype=bool)
+        for name in marker_name:
+            to_delete |= self._table[self._names] == name
+
         # Only keep the things that don't match
-        self._table = self._table[~matches]
+        self._table = self._table[~to_delete]
 
     def remove_all_markers(self):
         self._init_table()
@@ -397,22 +422,22 @@ class ImageWidget(ipw.VBox):
     image_height = trait.Int(help="Height of the image (not viewer)").tag(sync=True)
     zoom_level = trait.Float(help="Current zoom of the view").tag(sync=True)
     marker = trait.Any(help="Markers").tag(sync=True)
+
+    # Wonder if there is a way to force this to be a subclass of BaseInterval?
+    # Yes, with Instance (or maybe Type?)
     cuts = trait.Any(help="Cut levels", allow_none=True).tag(sync=False)
-    cursor = trait.Enum(ImageViewerInterface.ALLOWED_CURSOR_LOCATIONS, default_value='bottom',
-                        help='Whether and where to display cursor position').tag(sync=True)
+    cursor = "foo"
+
+    # Wonder if there is a way to force this to be a subclass of BaseStretch?
+    # Yes, with Instance (or maybe Type?)
     stretch = trait.Unicode(help='Stretch algorithm name', allow_none=True).tag(sync=True)
+    stretch_options = trait.List(trait.Unicode(),
+                                 default_value=list(STRETCHES.keys()),
+                                 help='Stretch algorithm options').tag(sync=True)
 
-    # Leave this in since the API seems to call for it
-    ALLOWED_CURSOR_LOCATIONS = ImageViewerInterface.ALLOWED_CURSOR_LOCATIONS
-
-    RESERVED_MARKER_SET_NAMES = trait.List(
-        trait.Unicode(),
-        default_value=ImageViewerInterface.RESERVED_MARKER_SET_NAMES,
-        help="Reserved marker set names"
-    ).tag(sync=True)
-
-    DEFAULT_MARKER_NAME = ImageViewerInterface.DEFAULT_MARKER_NAME
-    DEFAULT_INTERACTIVE_MARKER_NAME = ImageViewerInterface.DEFAULT_INTERACTIVE_MARKER_NAME
+    autocut_options = trait.List(trait.Unicode(),
+                                 default_value=['minmax', 'percentile'],
+                                 help='Autocut options').tag(sync=True)
 
     def __init__(self, *args, image_width=500, image_height=500):
         super().__init__(*args)
@@ -428,6 +453,8 @@ class ImageWidget(ipw.VBox):
         self._marker_table = MarkerTableManager()
         self._data = None
         self._wcs = None
+
+        # Marker state is going away
         self._is_marking = False
 
         self.scroll_pan = True
@@ -527,13 +554,14 @@ class ImageWidget(ipw.VBox):
 
         # First approach: get any current markers by that name, add this one
         # remove the old ones and draw the new ones.
-        marks = self.get_markers_by_name(marker_name=marker_name)
+        marks = self.get_markers(marker_name=marker_name)
         self._astro_im.plot_named_markers(marks['x'], marks['y'],
                                           marker_name,
                                           color=self.marker['color'],
                                           size=self.marker['radius']**2,
                                           style=self.marker['type'])
 
+    ## THIS CAN BE DROPPED, I THINK -- REPLACE WITH VIEWPORT
     def _init_watch_image_changes(self):
         """
         Watch for changes to the image scale, which indicate the user
@@ -624,16 +652,29 @@ class ImageWidget(ipw.VBox):
         # Allow these:
         # - a two-item thing (tuple, list, whatever)
         # - an Astropy interval
+        # - a name, like 'minmax'
         # - None
         proposed_cuts = proposal['value']
 
         bad_value_error = (f"{proposed_cuts} is not a valid value. "
                            "cuts must be one of None, "
-                           "an astropy interval, or list/tuple "
+                           "an astropy interval, name, or list/tuple "
                            "of length 2.")
 
         if ((proposed_cuts is None) or
             isinstance(proposed_cuts, apviz.BaseInterval)):
+            return proposed_cuts
+        elif isinstance(proposed_cuts, str):
+            if proposed_cuts not in self.autocut_options:
+                raise ValueError(bad_value_error)
+
+            match proposed_cuts:
+                case 'minmax':
+                    proposed_cuts = apviz.MinMaxInterval().get_limits(self._data)
+                case 'percentile':
+                    proposed_cuts = apviz.PercentileInterval(1, 99)
+                case _:
+                    raise ValueError(bad_value_error)
             return proposed_cuts
         else:
             try:
@@ -675,6 +716,7 @@ class ImageWidget(ipw.VBox):
             # of the event
             self._zoom_source_is_gui = False
 
+    ## ✂️ DROP THIS FROM HERE ✂️ to next scissors
     def _currently_marking_error_msg(self, caller):
         return (f'Cannot set {caller} while doing interactive '
                 f'marking. Call the stop_marking() method to '
@@ -723,10 +765,13 @@ class ImageWidget(ipw.VBox):
         elif change['new'] is None:
             self._cursor.layout.visibility = 'hidden'
 
+    # ✂️ END THIS CUT
+
     @property
     def viewer(self):
         return self._astro_im
 
+    # CUT
     @property
     def is_marking(self):
         """`True` if in marking mode, `False` otherwise.
@@ -736,6 +781,7 @@ class ImageWidget(ipw.VBox):
         """
         return self._is_marking
 
+    # CUT
     @property
     def _default_mark_tag_name(self):
         """
@@ -747,8 +793,16 @@ class ImageWidget(ipw.VBox):
     # The methods, grouped loosely by purpose
 
     # Methods for loading data
-    def load_fits(self, file_name_or_HDU, reset_view=True):
-        if isinstance(file_name_or_HDU, str):
+    def load(self, data):
+        if isinstance(data, NDData):
+            self._load_nddata(data)
+        elif isinstance(data, (str, Path, fits.ImageHDU, fits.CompImageHDU, fits.PrimaryHDU)):
+            self._load_fits(data)
+        else:
+            self._load_array(data)
+
+    def _load_fits(self, file_name_or_HDU, reset_view=True):
+        if isinstance(file_name_or_HDU, (str, Path)):
             ccd = CCDData.read(file_name_or_HDU)
         elif isinstance(file_name_or_HDU,
                         (fits.ImageHDU, fits.CompImageHDU, fits.PrimaryHDU)):
@@ -768,11 +822,11 @@ class ImageWidget(ipw.VBox):
         self._wcs = ccd.wcs
         self._send_data(reset_view=reset_view)
 
-    def load_array(self, array, reset_view=True):
+    def _load_array(self, array, reset_view=True):
         self._data = array
         self._send_data(reset_view=reset_view)
 
-    def load_nddata(self, data, reset_view=True):
+    def _load_nddata(self, data, reset_view=True):
         self._ccd = data
         self._data = self._ccd.data
         self._wcs = data.wcs
@@ -781,9 +835,11 @@ class ImageWidget(ipw.VBox):
 
     # Saving contents of the view and accessing the view
     def save(self, filename, overwrite=False):
-        if filename.endswith('.png'):
+        p = Path(filename)
+
+        if p.suffix == '.png':
             self._astro_im.save_png(filename, overwrite=overwrite)
-        elif filename.endswith('.svg'):
+        elif p.suffix == '.svg':
             self._astro_im.save_svg(filename, overwrite=overwrite)
         else:
             raise ValueError('Saving is not supported for that'
@@ -828,7 +884,7 @@ class ImageWidget(ipw.VBox):
 
         # Update the figure itself, which expects all markers of
         # the same name to be plotted at once.
-        marks = self.get_markers_by_name(marker_name)
+        marks = self.get_markers(marker_name)
 
         if marks:
             self._astro_im.plot_named_markers(marks['x'], marks['y'],
@@ -837,21 +893,21 @@ class ImageWidget(ipw.VBox):
                                               size=self.marker['radius']**2,
                                               style=self.marker['type'])
 
-    def remove_markers_by_name(self, marker_name):
+    def remove_markers(self, marker_name):
         # Remove from our tracking table
-        self._marker_table.remove_markers_by_name(marker_name)
+        self._marker_table.remove_markers(marker_name)
 
         # Remove from the visible canvas
         self._astro_im.remove_named_markers(marker_name)
 
-    def remove_all_markers(self):
+    def reset_markers(self):
         self._marker_table.remove_all_markers()
         self._astro_im.remove_markers()
 
     def _prepare_return_marker_table(self, marks, x_colname='x', y_colname='y',
                                      skycoord_colname='coord'):
         if len(marks) == 0:
-            return None
+            return Table(names=['x', 'y', 'coord', 'marker name'])
 
         if (self._data is None) or (self._wcs is None):
             # Do not include SkyCoord column
@@ -874,22 +930,25 @@ class ImageWidget(ipw.VBox):
     def get_marker_names(self):
         return self._marker_table.marker_names
 
-    def get_markers_by_name(self, marker_name=None, x_colname='x', y_colname='y',
+    def get_markers(self, marker_name=None, x_colname='x', y_colname='y',
                             skycoord_colname='coord'):
-
         # We should always allow the default name. The case
         # where that table is empty will be handled in a moment.
-        if (marker_name not in self._marker_table.marker_names
-                and marker_name != self._marker_table.default_mark_tag_name):
-            raise ValueError(f"No markers named '{marker_name}' found.")
+        if isinstance(marker_name, str):
+            if (marker_name not in self._marker_table.marker_names
+                    and marker_name != self._marker_table.default_mark_tag_name
+                    and marker_name != 'all'):
+                return Table(names=["x", "y", "coord", "marker name"])
 
-        marks = self._marker_table.get_markers_by_name(marker_name=marker_name)
-
-        if len(marks) == 0:
-            # No markers in this table. Issue a warning and continue.
-            # Test wants this outside of logger, so...
-            warnings.warn(f"Marker set named '{marker_name}' is empty", UserWarning)
-            return None
+        if marker_name == "all":
+            # This is a special case that is used in the tests
+            # to get all markers.
+            marks = self._marker_table.get_all_markers()
+        else:
+            if marker_name is None:
+                # This is the default name
+                marker_name = self.DEFAULT_MARKER_NAME
+            marks = self._marker_table.get_markers(marker_name=marker_name)
 
         marks = self._prepare_return_marker_table(marks,
                                                   x_colname=x_colname,
@@ -935,8 +994,8 @@ class ImageWidget(ipw.VBox):
         dy_val, dy_coord = _offset_is_pixel_or_sky(dy)
 
         if dx_coord != dy_coord:
-            raise ValueError(f'dx is of type {dx_coord} but '
-                             f'dy is of type {dy_coord}')
+            raise u.UnitConversionError(f'dx is of type {dx_coord} but dy is of type {dy_coord} and they are not convertible.')
+
 
         if dx_coord == 'data':
             x, y = self._astro_im.center
@@ -1005,7 +1064,7 @@ class ImageWidget(ipw.VBox):
             self._is_marking = False
             self.restore_and_clear_cached_state()
             if clear_markers:
-                self.remove_all_markers()
+                self.reset_markers()
 
     def set_cached_state(self):
         """Cache the following attributes before modifying their states:
