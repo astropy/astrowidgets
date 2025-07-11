@@ -4,4 +4,4 @@ try:
 except ImportError:
     __version__ = ''
 
-from .ginga import *  # noqa
+#from .ginga import *  # noqa
