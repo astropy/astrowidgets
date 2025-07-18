@@ -10,9 +10,11 @@ _ = pytest.importorskip("bqplot",
                                "available.")
 from astrowidgets.bqplot import ImageWidget  # noqa: E402
 
+
 def test_instance():
     image = ImageWidget()
     assert isinstance(image, ImageViewerInterface)
+
 
 class TestBQplotWidget(ImageAPITest):
     image_widget_class = ImageWidget

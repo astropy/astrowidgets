@@ -1,4 +1,3 @@
-import inspect
 from pathlib import Path
 
 import numpy as np
@@ -15,10 +14,7 @@ import ipywidgets as ipw
 from matplotlib import pyplot
 from matplotlib.colors import to_hex
 
-from astro_image_display_api import ImageViewerInterface
 from astro_image_display_api.image_viewer_logic import ImageViewerLogic
-
-import traitlets as trait
 
 
 def docs_from_super_if_missing(cls):
@@ -65,16 +61,15 @@ class _AstroImage(ipw.VBox):
         self._display_width = display_width
         self._display_height = self._viewer_aspect_ratio * self._display_width
 
-
         layout = ipw.Layout(width=f'{self._display_width}px',
                             height=f'{self._display_height}px',
                             justify_content='center')
 
         self._figure_layout = layout
 
-        scale_x = LinearScale(min=0, max=1, #self._image_shape[1],
+        scale_x = LinearScale(min=0, max=1,  # self._image_shape[1],
                               allow_padding=False)
-        scale_y = LinearScale(min=0, max=1, #self._image_shape[0],
+        scale_y = LinearScale(min=0, max=1,  # self._image_shape[0],
                               allow_padding=False)
         self._scales = {'x': scale_x, 'y': scale_y}
         axis_x = Axis(scale=scale_x, visible=False)
@@ -136,9 +131,8 @@ class _AstroImage(ipw.VBox):
             self._set_scale_aspect_ratio_to_match_viewer(reset_scale='x')
 
         # Great, now let's center
-        self.center = (self._image_shape[1]/2,
-                       self._image_shape[0]/2)
-
+        self.center = (self._image_shape[1] / 2,
+                       self._image_shape[0] / 2)
 
     def _set_scale_aspect_ratio_to_match_viewer(self,
                                                 reset_scale='y'):
@@ -155,7 +149,7 @@ class _AstroImage(ipw.VBox):
             # Make the scale aspect ratio match the
             # figure layout aspect ratio
             if reset_scale == 'y':
-                scale_factor = 1/ figure_aspect
+                scale_factor = 1 / figure_aspect
             else:
                 scale_factor = figure_aspect
 
@@ -264,8 +258,8 @@ class _AstroImage(ipw.VBox):
         cen = {}
         cen['x'], cen['y'] = self.center
         with scale_to_set.hold_trait_notifications():
-            scale_to_set.min = cen[direction] - size/2
-            scale_to_set.max = cen[direction] + size/2
+            scale_to_set.min = cen[direction] - size / 2
+            scale_to_set.max = cen[direction] + size / 2
 
         reset_scale = 'x' if direction == 'y' else 'y'
 
@@ -528,7 +522,6 @@ class ImageWidget(ipw.VBox, ImageViewerLogic):
         if self._data is not None:
             self._astro_im.set_data(self._interval_and_stretch(stretch=stretch, cuts=cuts),
                                     reset_view=reset_view)
-        #self.zoom_level = self._astro_im.get_zoom_level()
 
     @property
     def _current_image_label(self):
@@ -598,7 +591,7 @@ class ImageWidget(ipw.VBox, ImageViewerLogic):
             color="red",
             size=5,
             **kwargs
-        ):
+    ):
         super().set_catalog_style(
             catalog_label=catalog_label,
             shape=shape,
