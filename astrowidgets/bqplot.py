@@ -467,7 +467,7 @@ class ImageWidget(ipw.VBox, ImageViewerLogic):
                                           marker_name,
                                           color=self.marker['color'],
                                           size=self.marker['radius']**2,
-                                          style=self.marker['type'])
+                                          shape=self.marker['type'])
 
     # Update the viewport to match changes in the UI
     def _init_watch_image_changes(self):
@@ -499,8 +499,8 @@ class ImageWidget(ipw.VBox, ImageViewerLogic):
         # or the minimum instead of the maximum is also fine.
         x_scale = self._astro_im._scales['x']
 
-        # THIS IS TERRIBLE AND MAKES THINGS SUPER LAGGY!!!! Needs to be
-        # throttled or something. Look at the ImageGL observe options.
+        # If things seem laggy in the future, check whether throttling
+        # the updates helps.
         x_scale.observe(update_zoom_level, names='max')
 
     def _interval_and_stretch(self, stretch=None, cuts=None):
