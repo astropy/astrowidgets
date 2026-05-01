@@ -28,7 +28,9 @@
 import datetime
 import os
 import sys
-from pkg_resources import get_distribution
+from configparser import ConfigParser
+
+from astrowidgets import __version__ as aw_version
 
 try:
     from sphinx_astropy.conf.v1 import *  # noqa
@@ -37,7 +39,6 @@ except ImportError:
     sys.exit(1)
 
 # Get configuration information from setup.cfg
-from configparser import ConfigParser
 conf = ConfigParser()
 
 conf.read([os.path.join(os.path.dirname(__file__), '..', 'setup.cfg')])
@@ -76,7 +77,7 @@ copyright = '{0}, {1}'.format(datetime.datetime.now().year, author)
 # built documents.
 
 # The full version, including alpha/beta/rc tags.
-release = get_distribution(project).version
+release = aw_version
 # The short X.Y version.
 version = '.'.join(release.split('.')[:2])
 
