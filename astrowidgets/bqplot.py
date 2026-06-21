@@ -472,36 +472,49 @@ class ImageWidget(ipw.VBox, ImageViewerLogic):
     # Update the viewport to match changes in the UI
     def _init_watch_image_changes(self):
         """
-        Watch for changes to the image scale, which indicate the user
-        has either changed the zoom or has panned, and update the zoom_level.
+        Watch for changes to the image scales, which indicate the user
+        has either changed the zoom or has panned, and update the stored
+        viewport (center and field of view) to match.
         """
-        def update_zoom_level(event):
+        def update_viewport(event):
             """
-            Watch for changes in the zoom level from the viewer.
+            Watch for changes in the viewport (pan or zoom) from the viewer.
             """
-
-            old_width = self.get_viewport(sky_or_pixel='pixel', image_label=self._current_image_label)["fov"]
             new_width = self._astro_im.get_current_width()
             if new_width is None or self._updating_viewport:
                 # There is no image yet, or this object is in the process
-                # of changing the zoom, so return
+                # of changing the viewport, so return
                 return
 
-            # Do nothing if the zoom has not changed
-            if np.abs(new_width - old_width) > 1e-3:
-                # Let the zoom_level handler know the GUI itself
-                # generated this zoom change which means the GUI
-                # does not need to be updated.
+            current = self.get_viewport(sky_or_pixel='pixel',
+                                        image_label=self._current_image_label)
+            old_width = current["fov"]
+            old_center = current["center"]
+            new_center = self._astro_im.center
+
+            width_changed = np.abs(new_width - old_width) > 1e-3
+            center_changed = (
+                old_center is None
+                or np.abs(new_center[0] - old_center[0]) > 1e-3
+                or np.abs(new_center[1] - old_center[1]) > 1e-3
+            )
+
+            # Do nothing if neither the zoom nor the pan has changed
+            if width_changed or center_changed:
+                # Let the viewport handler know the GUI itself generated this
+                # change, which means the GUI does not need to be updated.
                 self._viewport_change_source_is_gui = True
-                self.set_viewport(fov=new_width)
+                self.set_viewport(center=new_center, fov=new_width)
 
-        # Observe changes to the maximum of the x scale. Observing the y scale
-        # or the minimum instead of the maximum is also fine.
-        x_scale = self._astro_im._scales['x']
-
+        # Observe changes to the maximum of both the x and y scales so that
+        # horizontal pan, vertical pan, and zoom are all detected. Observing
+        # the maximum (rather than the minimum) of each scale is sufficient
+        # because a pan shifts both ends of a scale.
+        #
         # If things seem laggy in the future, check whether throttling
         # the updates helps.
-        x_scale.observe(update_zoom_level, names='max')
+        for scale in (self._astro_im._scales['x'], self._astro_im._scales['y']):
+            scale.observe(update_viewport, names='max')
 
     def _interval_and_stretch(self, stretch=None, cuts=None):
         """
