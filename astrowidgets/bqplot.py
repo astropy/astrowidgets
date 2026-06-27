@@ -374,6 +374,9 @@ class ImageWidget(ipw.VBox, ImageViewerLogic):
         # to the viewer.
         self._viewport_change_source_is_gui = False
 
+        # Guards re-entrancy while we programmatically update the viewport.
+        self._updating_viewport = False
+
         # Provide an Output widget to which prints can be directed for
         # debugging.
         self._print_out = ipw.Output()
