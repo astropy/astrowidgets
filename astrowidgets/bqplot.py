@@ -545,11 +545,16 @@ class ImageWidget(ipw.VBox, ImageViewerLogic):
 
     def set_stretch(self, value, image_label=None, **kwargs):
         super().set_stretch(value, image_label=image_label, **kwargs)
-        self._send_data(stretch=value)
+        # Changing the stretch only affects the color mapping, so leave the
+        # current viewport (zoom/pan) untouched.
+        self._send_data(stretch=value, reset_view=False)
 
     def set_cuts(self, value, image_label=None, **kwargs):
         super().set_cuts(value, image_label=image_label, **kwargs)
-        self._send_data(cuts=self.get_cuts(image_label=image_label))
+        # Changing the cuts only affects the color mapping, so leave the
+        # current viewport (zoom/pan) untouched.
+        self._send_data(cuts=self.get_cuts(image_label=image_label),
+                        reset_view=False)
 
     @property
     def viewer(self):

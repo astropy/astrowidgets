@@ -2,7 +2,7 @@ import pytest
 
 from traitlets import TraitError
 
-from astro_image_display_api import ImageAPITest
+from astro_image_display_api.api_test import ImageAPITest
 from astro_image_display_api import ImageViewerInterface
 
 _ = pytest.importorskip("bqplot",
