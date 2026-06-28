@@ -31,6 +31,17 @@ def test_use_opencv_kwarg_warns_not_errors():
         ImageWidget(use_opencv=True)
 
 
+def test_pixel_offset_removed():
+    # The pixel_coords_offset kwarg and pixel_offset property have been
+    # removed; the API-approved way to handle this is via the viewport.
+    image = ImageWidget()
+    assert not hasattr(image, 'pixel_offset')
+    # pixel_coords_offset is no longer a recognized parameter, so it falls
+    # through to traitlets as an unrecognized argument.
+    with pytest.warns(DeprecationWarning, match='pixel_coords_offset'):
+        ImageWidget(pixel_coords_offset=1)
+
+
 class TestGingaWidget(ImageAPITest):
     image_widget_class = ImageWidget
     cursor_error_classes = (ValueError, TraitError)

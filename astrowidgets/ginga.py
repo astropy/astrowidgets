@@ -75,12 +75,6 @@ class ImageWidget(ipyw.VBox, ImageViewerLogic):
 
     image_width, image_height : int
         Dimension of the Jupyter notebook's image widget, in pixels.
-
-    pixel_coords_offset : int, optional
-        An offset, typically either 0 or 1, to add/subtract to all
-        pixel values when going to/from the displayed image.
-        *In almost all situations the default value, ``0``, is the
-        correct value to use.*
     """
     # Allowed locations for cursor display
     ALLOWED_CURSOR_LOCATIONS = ['top', 'bottom', None]
@@ -95,7 +89,7 @@ class ImageWidget(ipyw.VBox, ImageViewerLogic):
     DEFAULT_INTERACTIVE_MARKER_NAME: str = 'interactive'
 
     def __init__(self, *args, logger=None, image_width=500, image_height=500,
-                 pixel_coords_offset=0, **kwargs):
+                 **kwargs):
         if 'use_opencv' in kwargs:
             # Pop it so it is not forwarded to VBox, which would raise a
             # TraitError for an unknown trait.
@@ -111,8 +105,6 @@ class ImageWidget(ipyw.VBox, ImageViewerLogic):
         self._wcs = None
 
         self._viewer = EnhancedCanvasView(logger=logger)
-
-        self._pixel_offset = pixel_coords_offset
 
         self._jup_img = ipyw.Image(format='jpeg')
 
@@ -215,18 +207,6 @@ class ImageWidget(ipyw.VBox, ImageViewerLogic):
         self._viewer.set_window_size(self.image_width, self.image_height)
 
     @property
-    def pixel_offset(self):
-        """
-        An offset, typically either 0 or 1, to add/subtract to all
-        pixel values when going to/from the displayed image.
-        *In almost all situations the default value, ``0``, is the
-        correct value to use.*
-
-        This value cannot be modified after initialization.
-        """
-        return self._pixel_offset
-
-    @property
     def print_out(self):
         """
         An `ipywidgets.Output` widget that captures printed output from the
@@ -254,8 +234,7 @@ class ImageWidget(ipyw.VBox, ImageViewerLogic):
             except Exception:
                 imval = 'N/A'
 
-            val = 'X: {:.2f}, Y: {:.2f}'.format(data_x + self._pixel_offset,
-                                                data_y + self._pixel_offset)
+            val = 'X: {:.2f}, Y: {:.2f}'.format(data_x, data_y)
             if image.wcs.wcs is not None:
                 try:
                     ra, dec = image.pixtoradec(data_x, data_y)
@@ -278,8 +257,7 @@ class ImageWidget(ipyw.VBox, ImageViewerLogic):
         elif self.click_center:
             self._center_on((data_x, data_y))
             with self._print_out:
-                print('Centered on X={} Y={}'.format(data_x + self._pixel_offset,
-                                                     data_y + self._pixel_offset))
+                print('Centered on X={} Y={}'.format(data_x, data_y))
 
     # ------------------------------------------------------------------
     # Image loading
@@ -552,7 +530,7 @@ class ImageWidget(ipyw.VBox, ImageViewerLogic):
             self._viewer.set_pan(point.icrs.ra.deg, point.icrs.dec.deg,
                                  coord='wcs')
         else:
-            self._viewer.set_pan(*(np.asarray(point) - self._pixel_offset))
+            self._viewer.set_pan(*np.asarray(point))
 
     @property
     def cursor(self):
