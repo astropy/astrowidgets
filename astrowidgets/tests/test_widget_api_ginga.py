@@ -70,6 +70,19 @@ def test_image_size_getters_are_read_only():
         image.image_height = 600
 
 
+@pytest.mark.parametrize('fov', [50, 120, 200])
+def test_non_square_viewport_fov_round_trips(fov):
+    # The widget need not be square: fov is defined as the horizontal field of
+    # view, so it round-trips through set/get_viewport for a non-square viewer.
+    image = ImageWidget(image_width=600, image_height=300)
+    image.load_image(np.random.default_rng(1234).random((100, 150)))
+    image.set_viewport(center=(40, 60), fov=fov)
+    vport = image.get_viewport(sky_or_pixel='pixel')
+    assert vport['fov'] == pytest.approx(fov)
+    assert vport['center'][0] == pytest.approx(40)
+    assert vport['center'][1] == pytest.approx(60)
+
+
 def test_center_on_pixel_updates_viewport():
     # _center_on with a pixel tuple should re-center the stored viewport.
     image = ImageWidget()

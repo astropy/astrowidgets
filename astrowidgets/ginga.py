@@ -420,8 +420,14 @@ class ImageWidget(ipyw.VBox, ImageViewerLogic):
     def _viewport_window_size(self):
         """
         The window dimension (in screen pixels) used to convert between a
-        pixel field of view and a ginga scale. The viewer is square in the
-        default configuration, so either dimension works; use the width.
+        pixel field of view and a ginga scale.
+
+        Ginga scales the image isotropically (the same screen-pixels-per-data-
+        pixel in both directions), so we define the field of view as the
+        *horizontal* extent and always use the window width as the reference
+        dimension. This is self-consistent for a non-square viewer: both
+        set_viewport and get_viewport go through this single dimension, so the
+        round-trip is exact regardless of the window aspect ratio.
         """
         return self._viewer.get_window_size()[0]
 
