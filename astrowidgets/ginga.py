@@ -97,9 +97,9 @@ class ImageWidget(ipyw.VBox, ImageViewerLogic):
     def __init__(self, *args, logger=None, image_width=500, image_height=500,
                  pixel_coords_offset=0, **kwargs):
         super().__init__(*args)
-        # ImageViewerLogic is a dataclass; we do not run its __init__, so set
-        # up the state it would otherwise provide by hand.
-        self._set_up_catalog_image_dicts()
+        # ImageViewerLogic is a dataclass; we do not run its __init__, so run
+        # the post-init hook it would otherwise provide to set up its state.
+        ImageViewerLogic.__post_init__(self)
         self._wcs = None
 
         if 'use_opencv' in kwargs:
@@ -167,7 +167,6 @@ class ImageWidget(ipyw.VBox, ImageViewerLogic):
 
         # coordinates display
         self._jup_coord = ipyw.HTML('Coordinates show up here')
-        # This needs ipyevents 0.3.1 to work
         self._viewer.add_callback('cursor-changed', self._mouse_move_cb)
         self._viewer.add_callback('cursor-down', self._mouse_click_cb)
 
@@ -286,9 +285,9 @@ class ImageWidget(ipyw.VBox, ImageViewerLogic):
         # Let the AIDA logic store the data + WCS and set up the initial
         # viewport, cuts and stretch in our internal state.
         super().load_image(image, image_label=image_label, **kwargs)
-        image_label = self._resolve_image_label(image_label)
 
-        # Build a ginga AstroImage from the stored data and show it.
+        # Build a ginga AstroImage from the stored data and show it. The
+        # helpers resolve image_label internally, matching the bqplot backend.
         data = self.get_image(image_label=image_label)
         self._viewer.set_image(self._build_ginga_image(data))
 
@@ -387,7 +386,6 @@ class ImageWidget(ipyw.VBox, ImageViewerLogic):
             tags = [str(label) for label in self._catalogs]
         else:
             tags = [str(self._resolve_catalog_label(catalog_label))]
-
         super().remove_catalog(catalog_label, **kwargs)
 
         for tag in tags:
