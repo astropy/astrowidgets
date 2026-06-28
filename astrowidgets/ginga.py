@@ -702,10 +702,9 @@ class ImageWidget(ipyw.VBox, ImageViewerLogic):
         overwrite : bool, optional
             If `True`, overwrite an existing file.
         """
-        # The widget value is already PNG-encoded, so just write it out. This
-        # requires a running browser to have populated the buffer.
         if not overwrite and Path(filename).exists():
             raise FileExistsError(f'File {filename} exists and overwrite=False')
 
-        with open(filename, 'wb') as f:
-            f.write(self._jup_img.value)
+        # Ginga renders the view server-side, so this works without a running
+        # browser and honors the image format implied by the file extension.
+        self._viewer.save_rgb_image_as_file(str(filename))

@@ -95,13 +95,3 @@ def test_center_on_skycoord_updates_viewport():
 class TestGingaWidget(ImageAPITest):
     image_widget_class = ImageWidget
     cursor_error_classes = (ValueError, TraitError)
-
-    @pytest.mark.skip(reason="Saving requires a running browser to populate "
-                             "the image buffer.")
-    def test_save(self, tmp_path):
-        pass
-
-    @pytest.mark.skip(reason="Saving requires a running browser to populate "
-                             "the image buffer.")
-    def test_save_overwrite(self, tmp_path):
-        pass
