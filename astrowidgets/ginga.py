@@ -304,6 +304,9 @@ class ImageWidget(ipyw.VBox, ImageViewerLogic):
         if ginga_image is None:
             return
         cuts = self.get_cuts(image_label=image_label)
+        # get_cuts always returns a BaseInterval, and get_limits computes the
+        # concrete low/high for any interval type (percentile, zscale, etc.),
+        # so this is exact even for non-min/max cuts.
         low, high = cuts.get_limits(ginga_image.get_data())
         self._viewer.cut_levels(low, high)
 
@@ -328,6 +331,8 @@ class ImageWidget(ipyw.VBox, ImageViewerLogic):
         if self._viewer.get_image() is None:
             return
         cmap_name = self.get_colormap(image_label=image_label)
+        # The colormap defaults to None and is not set on load, so guard
+        # against pushing a None into ginga's set_color_map.
         if cmap_name is not None:
             self._viewer.set_color_map(cmap_name)
 
