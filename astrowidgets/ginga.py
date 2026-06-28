@@ -277,14 +277,19 @@ class ImageWidget(ipyw.VBox, ImageViewerLogic):
             image.set_data(np.asarray(data.data))
             wcs = getattr(data, 'wcs', None)
             if wcs is not None:
-                from ginga.util.wcsmod.wcs_astropy import AstropyWCS
-                _wcs = AstropyWCS(self.logger)
-                _wcs.load_header(wcs.to_header())
+                # A bad or exotic WCS can fail anywhere in here -- header
+                # serialization, ginga's header parser, or set_wcs -- so guard
+                # the whole block and degrade gracefully to displaying the image
+                # without a WCS. Catch Exception (not BaseException) so Ctrl-C
+                # still propagates, and log the traceback for debugging.
                 try:
+                    from ginga.util.wcsmod.wcs_astropy import AstropyWCS
+                    _wcs = AstropyWCS(self.logger)
+                    _wcs.load_header(wcs.to_header())
                     image.set_wcs(_wcs)
-                except Exception as e:  # pragma: no cover - defensive
-                    with self._print_out:
-                        print('Unable to set WCS from image: {}'.format(e))
+                except Exception:  # pragma: no cover - defensive
+                    self.logger.warning('Unable to set WCS from image',
+                                        exc_info=True)
         else:
             image.set_data(np.asarray(data))
 
@@ -359,6 +364,7 @@ class ImageWidget(ipyw.VBox, ImageViewerLogic):
             tags = [str(label) for label in self._catalogs]
         else:
             tags = [str(self._resolve_catalog_label(catalog_label))]
+
         super().remove_catalog(catalog_label, **kwargs)
 
         for tag in tags:
