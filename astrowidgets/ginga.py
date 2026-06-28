@@ -7,7 +7,6 @@ import warnings
 
 # THIRD-PARTY
 import numpy as np
-from astropy.coordinates import SkyCoord
 from astropy.nddata import NDData
 from astropy.table import Table
 
@@ -526,11 +525,7 @@ class ImageWidget(ipyw.VBox, ImageViewerLogic):
         Center the view on a point given either as a `~astropy.coordinates.SkyCoord`
         or as a tuple of pixel ``(X, Y)`` coordinates.
         """
-        if isinstance(point, SkyCoord):
-            self._viewer.set_pan(point.icrs.ra.deg, point.icrs.dec.deg,
-                                 coord='wcs')
-        else:
-            self._viewer.set_pan(*np.asarray(point))
+        self.set_viewport(center=point)
 
     @property
     def cursor(self):

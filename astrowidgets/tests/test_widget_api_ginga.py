@@ -1,10 +1,24 @@
+import numpy as np
 import pytest
 
 import ipywidgets as ipyw
+from astropy.coordinates import SkyCoord
+from astropy.nddata import NDData
+from astropy.wcs import WCS
 from traitlets import TraitError
 
 from astro_image_display_api.api_test import ImageAPITest
 from astro_image_display_api import ImageViewerInterface
+
+
+def _make_wcs():
+    w = WCS(naxis=2)
+    w.wcs.crpix = [-234.75, 8.3393]
+    w.wcs.cdelt = np.array([-0.066667, 0.066667])
+    w.wcs.crval = [0, -90]
+    w.wcs.ctype = ["RA---AIR", "DEC--AIR"]
+    w.wcs.set_pv([(2, 1, 45.0)])
+    return w
 
 _ = pytest.importorskip("ginga",
                         reason="Package required for test is not "
@@ -40,6 +54,28 @@ def test_pixel_offset_removed():
     # through to traitlets as an unrecognized argument.
     with pytest.warns(DeprecationWarning, match='pixel_coords_offset'):
         ImageWidget(pixel_coords_offset=1)
+
+
+def test_center_on_pixel_updates_viewport():
+    # _center_on with a pixel tuple should re-center the stored viewport.
+    image = ImageWidget()
+    image.load_image(np.zeros((100, 150)))
+    image._center_on((30, 40))
+    center = image.get_viewport(sky_or_pixel='pixel')['center']
+    assert center[0] == pytest.approx(30)
+    assert center[1] == pytest.approx(40)
+
+
+def test_center_on_skycoord_updates_viewport():
+    # _center_on with a SkyCoord should re-center the stored viewport.
+    wcs = _make_wcs()
+    image = ImageWidget()
+    image.load_image(NDData(data=np.zeros((100, 150)), wcs=wcs))
+    target = SkyCoord(*wcs.wcs.crval, unit='deg')
+    image._center_on(target)
+    center = image.get_viewport(sky_or_pixel='sky')['center']
+    assert isinstance(center, SkyCoord)
+    assert center.separation(target).arcsec == pytest.approx(0, abs=1e-3)
 
 
 class TestGingaWidget(ImageAPITest):
