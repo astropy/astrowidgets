@@ -188,22 +188,10 @@ class ImageWidget(ipyw.VBox, ImageViewerLogic):
         """Width of the image widget, in pixels."""
         return int(self._jup_img.width)
 
-    @image_width.setter
-    def image_width(self, value):
-        # Widgets expect width/height as strings, but most users will not, so
-        # do the conversion here.
-        self._jup_img.width = str(value)
-        self._viewer.set_window_size(self.image_width, self.image_height)
-
     @property
     def image_height(self):
         """Height of the image widget, in pixels."""
         return int(self._jup_img.height)
-
-    @image_height.setter
-    def image_height(self, value):
-        self._jup_img.height = str(value)
-        self._viewer.set_window_size(self.image_width, self.image_height)
 
     @property
     def print_out(self):

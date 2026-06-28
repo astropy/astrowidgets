@@ -56,6 +56,20 @@ def test_pixel_offset_removed():
         ImageWidget(pixel_coords_offset=1)
 
 
+def test_image_size_getters_are_read_only():
+    # image_width/image_height are read-only; resizing goes through the
+    # viewport API instead.
+    image = ImageWidget(image_width=400, image_height=300)
+    assert isinstance(image.image_width, int)
+    assert isinstance(image.image_height, int)
+    assert image.image_width == 400
+    assert image.image_height == 300
+    with pytest.raises(AttributeError):
+        image.image_width = 600
+    with pytest.raises(AttributeError):
+        image.image_height = 600
+
+
 def test_center_on_pixel_updates_viewport():
     # _center_on with a pixel tuple should re-center the stored viewport.
     image = ImageWidget()
