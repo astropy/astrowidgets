@@ -1,9 +1,16 @@
+import warnings
+
 import numpy as np
 import pytest
 
 import ipywidgets as ipyw
 from astropy.coordinates import SkyCoord
 from astropy.nddata import NDData
+from astropy.utils.exceptions import AstropyUserWarning
+from astropy.visualization import (AsinhStretch, ContrastBiasStretch,
+                                   LinearStretch, LogStretch, PowerDistStretch,
+                                   PowerStretch, SinhStretch, SqrtStretch,
+                                   SquaredStretch)
 from astropy.wcs import WCS
 from traitlets import TraitError
 
@@ -23,7 +30,28 @@ def _make_wcs():
 _ = pytest.importorskip("ginga",
                         reason="Package required for test is not "
                                "available.")
+from ginga import ColorDist  # noqa: E402
 from astrowidgets.ginga import ImageWidget  # noqa: E402
+
+
+def _loaded_widget():
+    image = ImageWidget()
+    image.load_image(np.random.default_rng(1234).random((100, 150)))
+    return image
+
+
+def _astropy_levels(stretch, dist):
+    # Reproduce the integer lookup table ginga would build from an astropy
+    # stretch evaluated on the same 0..1 ramp, so it can be compared against a
+    # configured ginga ColorDist's ``hash``.
+    base = np.arange(0.0, float(dist.hashsize), 1.0) / dist.hashsize
+    out = np.clip(np.asarray(stretch(base, clip=True), dtype=float), 0.0, 1.0)
+    return (out * (dist.colorlen - 1)).astype(np.int64)
+
+
+def _max_level_diff(dist, stretch):
+    return int(np.abs(dist.hash.astype(np.int64)
+                      - _astropy_levels(stretch, dist)).max())
 
 
 def test_instance():
@@ -68,6 +96,95 @@ def test_image_size_getters_are_read_only():
         image.image_width = 600
     with pytest.raises(AttributeError):
         image.image_height = 600
+
+
+@pytest.mark.parametrize('stretch', [AsinhStretch(0.05), SinhStretch(0.2),
+                                     SqrtStretch(), SquaredStretch(),
+                                     LinearStretch()])
+def test_native_dist_matches_astropy_exactly(stretch):
+    # For the families ginga implements directly, the configured ginga
+    # ColorDist is an exact reparametrization of the astropy stretch, so its
+    # lookup table is identical to evaluating the astropy stretch on the ramp.
+    image = _loaded_widget()
+    image.set_stretch(stretch)
+    dist = image._viewer.get_rgbmap().get_dist()
+    np.testing.assert_array_equal(dist.hash, _astropy_levels(stretch, dist))
+
+
+@pytest.mark.parametrize('stretch,max_diff',
+                         [(LogStretch(500), 1), (PowerDistStretch(200), 2)])
+def test_native_dist_matches_astropy_closely(stretch, max_diff):
+    # Ginga normalizes log/power slightly differently than astropy (log(a) vs
+    # log(a+1)); the curve shape still matches to within a quantization level.
+    image = _loaded_widget()
+    image.set_stretch(stretch)
+    dist = image._viewer.get_rgbmap().get_dist()
+    assert _max_level_diff(dist, stretch) <= max_diff
+
+
+def test_asinh_parameter_flows_to_ginga():
+    # The astropy shape parameter must reach ginga, not be discarded:
+    # AsinhStretch(a) -> AsinhDist(factor=1/a, nonlinearity=arcsinh(1/a)).
+    image = _loaded_widget()
+    image.set_stretch(AsinhStretch(0.05))
+    dist = image._viewer.get_rgbmap().get_dist()
+    assert isinstance(dist, ColorDist.AsinhDist)
+    assert dist.factor == pytest.approx(20.0)
+    assert dist.nonlinearity == pytest.approx(np.arcsinh(20.0))
+
+
+def test_log_parameter_flows_to_ginga():
+    image = _loaded_widget()
+    image.set_stretch(LogStretch(500))
+    dist = image._viewer.get_rgbmap().get_dist()
+    assert isinstance(dist, ColorDist.LogDist)
+    assert dist.exp == 500
+
+
+def test_power_stretch_uses_adapter_not_ginga_power():
+    # ginga's 'power' algorithm is (a**x - 1)/(a - 1) -- that is astropy's
+    # PowerDistStretch, NOT PowerStretch (x**a). PowerStretch has no ginga
+    # family and must be applied faithfully through the adapter.
+    image = _loaded_widget()
+    stretch = PowerStretch(3.0)
+    image.set_stretch(stretch)
+    dist = image._viewer.get_rgbmap().get_dist()
+    assert not isinstance(dist, ColorDist.PowerDist)
+    np.testing.assert_array_equal(dist.hash, _astropy_levels(stretch, dist))
+
+
+def test_powerdist_stretch_maps_to_ginga_power():
+    image = _loaded_widget()
+    image.set_stretch(PowerDistStretch(200))
+    dist = image._viewer.get_rgbmap().get_dist()
+    assert isinstance(dist, ColorDist.PowerDist)
+    assert dist.exp == 200
+
+
+def test_ginga_less_stretch_applied_faithfully_without_warning():
+    # ContrastBiasStretch has no ginga family; the adapter applies it exactly
+    # and, unlike the old behavior, does not warn or fall back to linear.
+    image = _loaded_widget()
+    stretch = ContrastBiasStretch(1.0, 0.5)
+    with warnings.catch_warnings():
+        warnings.simplefilter('error', AstropyUserWarning)
+        image.set_stretch(stretch)
+    dist = image._viewer.get_rgbmap().get_dist()
+    np.testing.assert_array_equal(dist.hash, _astropy_levels(stretch, dist))
+
+
+@pytest.mark.parametrize('stretch,algorithm',
+                         [(LinearStretch(), 'linear'), (LogStretch(), 'log'),
+                          (AsinhStretch(), 'asinh'), (SinhStretch(), 'sinh'),
+                          (SqrtStretch(), 'sqrt'), (SquaredStretch(), 'squared')])
+def test_native_stretch_reports_family_name(stretch, algorithm):
+    # Native families keep ginga's algorithm-name introspection working and
+    # apply without warning.
+    image = _loaded_widget()
+    with warnings.catch_warnings():
+        warnings.simplefilter('error', AstropyUserWarning)
+        image.set_stretch(stretch)
+    assert image._viewer.get_rgbmap().get_hash_algorithm() == algorithm
 
 
 @pytest.mark.parametrize('fov', [50, 120, 200])

@@ -9,11 +9,15 @@ import warnings
 import numpy as np
 from astropy.nddata import NDData
 from astropy.table import Table
+from astropy.visualization import (AsinhStretch, LinearStretch, LogStretch,
+                                   PowerDistStretch, SinhStretch, SqrtStretch,
+                                   SquaredStretch)
 
 # Jupyter widgets
 import ipywidgets as ipyw
 
 # Ginga
+from ginga import ColorDist
 from ginga.AstroImage import AstroImage
 from ginga.canvas.CanvasObject import drawCatalog
 from ginga.web.jupyterw.ImageViewJpw import EnhancedCanvasView
@@ -24,17 +28,80 @@ from astro_image_display_api.image_viewer_logic import ImageViewerLogic
 __all__ = ['ImageWidget']
 
 
-# Map the astropy.visualization stretch classes to the names ginga uses for
-# its color-distribution ("stretch") algorithms.
-_ASTROPY_STRETCH_TO_GINGA = {
-    'LinearStretch': 'linear',
-    'LogStretch': 'log',
-    'SqrtStretch': 'sqrt',
-    'PowerStretch': 'power',
-    'AsinhStretch': 'asinh',
-    'SinhStretch': 'sinh',
-    'SquaredStretch': 'squared',
-}
+class _AstropyStretchDist(ColorDist.ColorDistBase):
+    """
+    A ginga color distribution backed directly by an astropy stretch.
+
+    Ginga has no native color-distribution class for some astropy stretches
+    (e.g. ``PowerStretch`` (x**a), ``ContrastBiasStretch``, ``HistEqStretch``).
+    Because every astropy stretch maps the unit interval onto itself, the
+    stretch evaluated on ginga's 0..1 ramp *is* the lookup table ginga needs,
+    so this adapter reproduces any astropy stretch exactly.
+    """
+
+    def __init__(self, hashsize, stretch, colorlen=None):
+        self.stretch = stretch
+        super().__init__(hashsize, colorlen=colorlen)
+
+    def calc_hash(self):
+        base = np.arange(0.0, float(self.hashsize), 1.0) / self.hashsize
+        out = np.asarray(self.stretch(base, clip=True), dtype=float)
+        out = np.clip(out, 0.0, 1.0)
+        # normalize to color range
+        ll = out * (self.colorlen - 1)
+        self.hash = ll.astype(np.uint, copy=False)
+        self.check_hash()
+
+    def get_dist_pct(self, pct):
+        # Inverse mapping, used to place color-bar ticks. Astropy stretches
+        # expose ``.inverse``; fall back to the identity if one is unavailable.
+        pct = np.asarray(pct, dtype=float)
+        try:
+            val = np.asarray(self.stretch.inverse(pct), dtype=float)
+        except (NotImplementedError, AttributeError):
+            val = pct
+        return np.clip(val, 0.0, 1.0)
+
+    def __str__(self):
+        return type(self.stretch).__name__
+
+
+def _ginga_dist_for_stretch(stretch, hashsize):
+    """
+    Build a ginga `~ginga.ColorDist.ColorDistBase` reproducing an astropy
+    stretch, honoring its shape parameter.
+
+    Ginga's parametrized distributions are reparametrizations of astropy's
+    stretches, so where ginga has the family we configure its native class:
+    the hyperbolic families match exactly, while log/power match the curve
+    shape to within a quantization level (ginga normalizes by ``log(a)``/``a``
+    where astropy uses ``log(a + 1)``/``a - 1``). Stretches ginga lacks --
+    including ``PowerStretch`` (x**a), which is a different family than ginga's
+    ``'power'`` (astropy's ``PowerDistStretch``) -- are handled exactly by
+    `_AstropyStretchDist`.
+    """
+    if isinstance(stretch, AsinhStretch):
+        factor = 1.0 / stretch.a
+        return ColorDist.AsinhDist(hashsize, factor=factor,
+                                   nonlinearity=np.arcsinh(factor))
+    if isinstance(stretch, SinhStretch):
+        factor = 1.0 / stretch.a
+        return ColorDist.SinhDist(hashsize, factor=factor,
+                                  nonlinearity=np.sinh(factor))
+    if isinstance(stretch, LogStretch):
+        return ColorDist.LogDist(hashsize, exp=stretch.a)
+    if isinstance(stretch, PowerDistStretch):
+        return ColorDist.PowerDist(hashsize, exp=stretch.a)
+    # SquaredStretch subclasses PowerStretch, so check it before any plain
+    # PowerStretch would fall through to the adapter.
+    if isinstance(stretch, SquaredStretch):
+        return ColorDist.SquaredDist(hashsize)
+    if isinstance(stretch, SqrtStretch):
+        return ColorDist.SqrtDist(hashsize)
+    if (isinstance(stretch, LinearStretch)
+            and stretch.slope == 1 and stretch.intercept == 0):
+        return ColorDist.LinearDist(hashsize)
+    return _AstropyStretchDist(hashsize, stretch)
 
 
 def docs_from_super_if_missing(cls):
@@ -316,6 +383,10 @@ class ImageWidget(ipyw.VBox, ImageViewerLogic):
         self._viewer.cut_levels(low, high)
 
     def set_stretch(self, value, image_label=None, **kwargs):
+        # The astropy stretch (including its shape parameter) is reproduced in
+        # ginga by configuring the matching native color distribution, or, for
+        # stretches ginga lacks a family for, by an astropy-backed adapter.
+        # See _ginga_dist_for_stretch.
         super().set_stretch(value, image_label=image_label, **kwargs)
         # Changing the stretch only affects the color mapping, so leave the
         # current viewport (zoom/pan) untouched.
@@ -325,8 +396,11 @@ class ImageWidget(ipyw.VBox, ImageViewerLogic):
         if self._viewer.get_image() is None:
             return
         stretch = self.get_stretch(image_label=image_label)
-        algorithm = _ASTROPY_STRETCH_TO_GINGA.get(type(stretch).__name__, 'linear')
-        self._viewer.set_color_algorithm(algorithm)
+        rgbmap = self._viewer.get_rgbmap()
+        # Inject a fully parametrized distribution; set_dist fires the rgbmap's
+        # 'changed' callback, which redraws. (set_color_algorithm cannot carry
+        # parameters -- it only ever builds a distribution with ginga defaults.)
+        rgbmap.set_dist(_ginga_dist_for_stretch(stretch, rgbmap.get_hash_size()))
 
     def set_colormap(self, map_name, image_label=None, **kwargs):
         super().set_colormap(map_name, image_label=image_label, **kwargs)
