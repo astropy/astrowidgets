@@ -27,6 +27,7 @@ def _make_wcs():
     w.wcs.set_pv([(2, 1, 45.0)])
     return w
 
+
 _ = pytest.importorskip("ginga",
                         reason="Package required for test is not "
                                "available.")
