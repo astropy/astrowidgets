@@ -245,6 +245,43 @@ class TestBQplotWidget(ImageAPITest):
         np.testing.assert_allclose(image_mark.x, [-0.5, arr.shape[1] - 0.5])
         np.testing.assert_allclose(image_mark.y, [-0.5, arr.shape[0] - 0.5])
 
+    def test_load_image_flushes_image_before_scales(self, data, mocker):
+        # The image mark and the two scales are separate widgets, each
+        # syncing its own state message that the front end redraws on.
+        # If a scale syncs before the image mark, the front end briefly
+        # draws the OLD image against the NEW scales (a visible refit).
+        # The new image data must reach the front end first.
+        self.image.load_image(data, image_label='first')
+
+        astro_im = self.image._astro_im
+        image_mark = astro_im._image
+        scale_x = astro_im._scales['x']
+        scale_y = astro_im._scales['y']
+
+        # A different shape so the image extent and both scales change.
+        arr = np.arange(30 * 40, dtype=float).reshape(30, 40)
+
+        order = []
+
+        def record(name, widget):
+            real = widget.send_state
+
+            def wrapper(*args, **kwargs):
+                order.append(name)
+                return real(*args, **kwargs)
+
+            mocker.patch.object(widget, 'send_state', side_effect=wrapper)
+
+        record('image', image_mark)
+        record('scale_x', scale_x)
+        record('scale_y', scale_y)
+
+        self.image.load_image(arr, image_label='second')
+
+        assert 'image' in order
+        assert order.index('image') < order.index('scale_x')
+        assert order.index('image') < order.index('scale_y')
+
     def test_get_viewport_reflects_interactive_pan(self, data):
         # Panning in the browser shifts the bqplot scales directly. Simulate
         # that here and check that get_viewport reports the new center.
