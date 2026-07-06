@@ -616,14 +616,18 @@ class ImageWidget(ipw.VBox, ImageViewerLogic):
         if image_label is not None and image_label in self._images:
             # Re-loading an existing image: its own settings are current.
             settings_label = image_label
+            have_current = True
         elif self._data is not None:
-            # A new image: carry forward from the displayed image.
+            # A new image: carry forward from the displayed image. Its label
+            # is legitimately None when the caller never passed one, so guard
+            # on whether an image is displayed, not on the label's value.
             settings_label = self._current_image_label
+            have_current = True
         else:
             # Nothing has been displayed yet.
-            settings_label = None
+            have_current = False
 
-        if settings_label is not None:
+        if have_current:
             current_cuts = self.get_cuts(image_label=settings_label)
             current_stretch = self.get_stretch(image_label=settings_label)
             current_colormap = self.get_colormap(image_label=settings_label)
