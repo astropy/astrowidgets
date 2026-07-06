@@ -1,3 +1,4 @@
+from contextlib import contextmanager
 from pathlib import Path
 
 import numpy as np
@@ -157,19 +158,32 @@ class _AstroImage(ipw.VBox):
             self._scales[reset_scale].max = frozen_width[reset_scale] * scale_factor
             self.center = current_center
 
+    @contextmanager
+    def _hold_all_sync(self):
+        """
+        Batch trait sync messages for the image mark and both scales so
+        that the front end receives a single state update per widget,
+        and hence redraws once, instead of redrawing after every trait
+        assignment.
+        """
+        with self._image.hold_sync(), self._scales['x'].hold_sync(), \
+                self._scales['y'].hold_sync():
+            yield
+
     def set_data(self, image_data, reset_view=True):
         self._image_shape = image_data.shape
 
-        if reset_view:
-            self.reset_scale_to_fit_image()
+        with self._hold_all_sync():
+            if reset_view:
+                self.reset_scale_to_fit_image()
 
-        # Set the image data and map it to the bqplot figure so that
-        # cursor location corresponds to the underlying array index.
-        # The offset follows the convention that the index corresponds
-        # to the center of the pixel.
-        self._image.image = image_data
-        self._image.x = [-0.5, self._image_shape[1] - 0.5]
-        self._image.y = [-0.5, self._image_shape[0] - 0.5]
+            # Set the image data and map it to the bqplot figure so that
+            # cursor location corresponds to the underlying array index.
+            # The offset follows the convention that the index corresponds
+            # to the center of the pixel.
+            self._image.image = image_data
+            self._image.x = [-0.5, self._image_shape[1] - 0.5]
+            self._image.y = [-0.5, self._image_shape[0] - 0.5]
 
     @property
     def scale_widths(self):
@@ -579,16 +593,21 @@ class ImageWidget(ipw.VBox, ImageViewerLogic):
 
     # The methods, grouped loosely by purpose
     def load_image(self, image, image_label=None, **kwargs):
-        super().load_image(image, image_label=image_label, **kwargs)
-        data = self.get_image(image_label=image_label)
+        # Hold the sync so the scale changes from the viewport
+        # initialization in the API layer arrive at the front end in the
+        # same batch as the new image data, avoiding flicker from
+        # intermediate redraws.
+        with self._astro_im._hold_all_sync():
+            super().load_image(image, image_label=image_label, **kwargs)
+            data = self.get_image(image_label=image_label)
 
-        self._data = data.data if isinstance(data, NDData) else data
-        self._refresh_display(image_label=image_label, reset_view=True)
+            self._data = data.data if isinstance(data, NDData) else data
+            self._refresh_display(image_label=image_label, reset_view=True)
 
-        # The API layer does not store a colormap on load, so record the
-        # default so that get_colormap reports what is displayed.
-        if self.get_colormap(image_label=image_label) is None:
-            self.set_colormap(self._default_colormap, image_label=image_label)
+            # The API layer does not store a colormap on load, so record the
+            # default so that get_colormap reports what is displayed.
+            if self.get_colormap(image_label=image_label) is None:
+                self.set_colormap(self._default_colormap, image_label=image_label)
 
     # Saving contents of the view and accessing the view
     def save(self, filename, overwrite=False, **kwargs):
