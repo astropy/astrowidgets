@@ -71,6 +71,38 @@ class TestBQplotWidget(ImageAPITest):
         assert self.image.get_colormap() == 'Greys_r'
         assert self.image._astro_im._image.scales['image'].colors == greys_r
 
+    def test_set_stretch_keeps_stored_cuts(self):
+        # Changing the stretch must re-display using the cuts stored for
+        # the image, not fall back to the widget's default cuts.
+        rng = np.random.default_rng(seed=42)
+        arr = rng.integers(1100, 1300, size=(50, 60)).astype(np.uint16)
+        arr[25, 30] = 65535
+
+        self.image.load_image(arr)
+        stretch = apviz.LogStretch()
+        self.image.set_stretch(stretch)
+
+        displayed = np.asarray(self.image._astro_im._image.image)
+        expected = stretch(self.image.get_cuts()(arr))
+        np.testing.assert_allclose(displayed, expected)
+
+    def test_set_cuts_keeps_stored_stretch(self):
+        # Changing the cuts must re-display using the stretch stored for
+        # the image, not fall back to the widget's default stretch.
+        rng = np.random.default_rng(seed=42)
+        arr = rng.integers(1100, 1300, size=(50, 60)).astype(np.uint16)
+        arr[25, 30] = 65535
+
+        self.image.load_image(arr)
+        stretch = apviz.LogStretch()
+        self.image.set_stretch(stretch)
+        cuts = apviz.AsymmetricPercentileInterval(5, 90)
+        self.image.set_cuts(cuts)
+
+        displayed = np.asarray(self.image._astro_im._image.image)
+        expected = stretch(cuts(arr))
+        np.testing.assert_allclose(displayed, expected)
+
     def test_get_viewport_reflects_interactive_pan(self, data):
         # Panning in the browser shifts the bqplot scales directly. Simulate
         # that here and check that get_viewport reports the new center.
