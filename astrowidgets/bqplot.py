@@ -364,7 +364,9 @@ class ImageWidget(ipw.VBox, ImageViewerLogic):
 
         self._astro_im = _AstroImage(display_width=display_width,
                                      viewer_aspect_ratio=display_aspect_ratio)
-        self._default_cuts = apviz.MinMaxInterval()
+        # Cut out the sky background at the bottom and clip only the
+        # brightest pixels at the top.
+        self._default_cuts = apviz.AsymmetricPercentileInterval(30, 96)
         self._default_stretch = None
 
         self._data = None
