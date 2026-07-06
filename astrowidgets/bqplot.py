@@ -395,6 +395,9 @@ class ImageWidget(ipw.VBox, ImageViewerLogic):
         # Guards re-entrancy while we programmatically update the viewport.
         self._updating_viewport = False
 
+        # While True, _refresh_display does nothing; set by _defer_refresh.
+        self._refresh_deferred = False
+
         # Provide an Output widget to which prints can be directed for
         # debugging.
         self._print_out = ipw.Output()
@@ -561,12 +564,25 @@ class ImageWidget(ipw.VBox, ImageViewerLogic):
         Recompute the displayed array from the cuts and stretch stored
         for the image and send it to the viewer.
         """
-        if self._data is None:
+        if self._data is None or self._refresh_deferred:
             return
 
         self._send_data(cuts=self.get_cuts(image_label=image_label),
                         stretch=self.get_stretch(image_label=image_label),
                         reset_view=reset_view)
+
+    @contextmanager
+    def _defer_refresh(self):
+        """
+        Make _refresh_display a no-op inside the block so that several
+        settings can be stored with a single recomputation of the
+        displayed array. The caller refreshes after the block.
+        """
+        self._refresh_deferred = True
+        try:
+            yield
+        finally:
+            self._refresh_deferred = False
 
     @property
     def _current_image_label(self):
@@ -593,21 +609,47 @@ class ImageWidget(ipw.VBox, ImageViewerLogic):
 
     # The methods, grouped loosely by purpose
     def load_image(self, image, image_label=None, **kwargs):
+        # A newly loaded image is always displayed with the current cuts,
+        # stretch and colormap; only the viewport resets. Capture the
+        # current settings before the API layer replaces them with its own
+        # defaults during the load.
+        if self._data is not None:
+            # A new image: carry forward from the displayed image.
+            settings_label = self._current_image_label
+        else:
+            # Nothing has been displayed yet.
+            settings_label = None
+
+        if settings_label is not None:
+            current_cuts = self.get_cuts(image_label=settings_label)
+            current_stretch = self.get_stretch(image_label=settings_label)
+            current_colormap = self.get_colormap(image_label=settings_label)
+        else:
+            current_cuts = self._default_cuts
+            # Leave the stretch the API layer stores on load (linear).
+            current_stretch = self._default_stretch
+            current_colormap = self._default_colormap
+
         # Hold the sync so the scale changes from the viewport
         # initialization in the API layer arrive at the front end in the
         # same batch as the new image data, avoiding flicker from
         # intermediate redraws.
         with self._astro_im._hold_all_sync():
-            super().load_image(image, image_label=image_label, **kwargs)
-            data = self.get_image(image_label=image_label)
+            # Store the settings for the new image so the get_* methods
+            # report what is displayed. Defer the refresh each setter
+            # triggers; one refresh at the end displays the image.
+            with self._defer_refresh():
+                super().load_image(image, image_label=image_label, **kwargs)
 
-            self._data = data.data if isinstance(data, NDData) else data
+                self.set_cuts(current_cuts, image_label=image_label)
+                if current_stretch is not None:
+                    self.set_stretch(current_stretch, image_label=image_label)
+                self.set_colormap(current_colormap, image_label=image_label)
+
+                data = self.get_image(image_label=image_label)
+                self._data = data.data if isinstance(data, NDData) else data
+
             self._refresh_display(image_label=image_label, reset_view=True)
-
-            # The API layer does not store a colormap on load, so record the
-            # default so that get_colormap reports what is displayed.
-            if self.get_colormap(image_label=image_label) is None:
-                self.set_colormap(self._default_colormap, image_label=image_label)
 
     # Saving contents of the view and accessing the view
     def save(self, filename, overwrite=False, **kwargs):
