@@ -613,7 +613,10 @@ class ImageWidget(ipw.VBox, ImageViewerLogic):
         # stretch and colormap; only the viewport resets. Capture the
         # current settings before the API layer replaces them with its own
         # defaults during the load.
-        if self._data is not None:
+        if image_label is not None and image_label in self._images:
+            # Re-loading an existing image: its own settings are current.
+            settings_label = image_label
+        elif self._data is not None:
             # A new image: carry forward from the displayed image.
             settings_label = self._current_image_label
         else:
