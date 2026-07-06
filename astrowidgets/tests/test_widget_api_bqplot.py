@@ -131,6 +131,36 @@ class TestBQplotWidget(ImageAPITest):
         displayed = np.asarray(self.image._astro_im._image.image)
         np.testing.assert_allclose(displayed, first_stretch(first_cuts(new_arr)))
 
+    def test_load_image_keeps_settings_without_labels(self):
+        # The carry-forward of cuts, stretch and colormap must work in the
+        # common interactive case where no image_label is ever passed, so
+        # every image and its settings live under the API's default (None)
+        # label. Loading a second image must keep the settings currently in
+        # effect, not fall back to the widget defaults.
+        rng = np.random.default_rng(seed=42)
+        arr = rng.integers(1100, 1300, size=(50, 60)).astype(np.uint16)
+        arr[25, 30] = 65535
+
+        self.image.load_image(arr)
+        cuts = apviz.AsymmetricPercentileInterval(5, 90)
+        stretch = apviz.LogStretch()
+        self.image.set_cuts(cuts)
+        self.image.set_stretch(stretch)
+        self.image.set_colormap('viridis')
+
+        # A differently shaped second image, still with no label.
+        arr2 = rng.integers(1100, 1300, size=(40, 30)).astype(np.uint16)
+        arr2[10, 15] = 65535
+        self.image.load_image(arr2)
+
+        assert self.image.get_cuts() is cuts
+        assert self.image.get_stretch() is stretch
+        assert self.image.get_colormap() == 'viridis'
+        assert self.image._astro_im._image.scales['image'].colors == bqcolors('viridis')
+
+        displayed = np.asarray(self.image._astro_im._image.image)
+        np.testing.assert_allclose(displayed, stretch(cuts(arr2)))
+
     def test_first_load_stores_widget_default_cuts(self):
         # With nothing loaded yet there are no current settings to carry
         # forward, so the first image should be displayed with the widget's
