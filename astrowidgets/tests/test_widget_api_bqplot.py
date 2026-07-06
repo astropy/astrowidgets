@@ -10,7 +10,7 @@ from astro_image_display_api import ImageViewerInterface
 _ = pytest.importorskip("bqplot",
                         reason="Package required for test is not "
                                "available.")
-from astrowidgets.bqplot import ImageWidget  # noqa: E402
+from astrowidgets.bqplot import ImageWidget, bqcolors  # noqa: E402
 
 
 def test_instance():
@@ -58,6 +58,18 @@ class TestBQplotWidget(ImageAPITest):
         self.image._data = arr
         expected = apviz.AsymmetricPercentileInterval(30, 96)(arr)
         np.testing.assert_allclose(self.image._interval_and_stretch(), expected)
+
+    def test_default_colormap_is_greys_r(self, data):
+        # With no colormap explicitly set, the display should use Greys_r
+        # (low = black, high = white), the usual astronomical convention,
+        # both before and after an image is loaded, and get_colormap should
+        # report it.
+        greys_r = bqcolors('Greys_r')
+        assert self.image._astro_im._image.scales['image'].colors == greys_r
+
+        self.image.load_image(data)
+        assert self.image.get_colormap() == 'Greys_r'
+        assert self.image._astro_im._image.scales['image'].colors == greys_r
 
     def test_get_viewport_reflects_interactive_pan(self, data):
         # Panning in the browser shifts the bqplot scales directly. Simulate
