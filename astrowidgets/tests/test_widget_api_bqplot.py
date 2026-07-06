@@ -103,6 +103,39 @@ class TestBQplotWidget(ImageAPITest):
         expected = stretch(cuts(arr))
         np.testing.assert_allclose(displayed, expected)
 
+    def test_load_image_batches_frontend_updates(self, data, mocker):
+        # Every traitlet assignment is normally synced to the browser as
+        # its own message, each triggering a redraw, so loading an image
+        # produced a series of visible intermediate states (flicker).
+        # Loading should batch the updates so the image mark and each
+        # scale send at most one state message.
+        self.image.load_image(data, image_label='first')
+
+        astro_im = self.image._astro_im
+        image_mark = astro_im._image
+        scale_x = astro_im._scales['x']
+        scale_y = astro_im._scales['y']
+
+        # Use a different shape so the image extent and scales all change.
+        arr = np.arange(30 * 40, dtype=float).reshape(30, 40)
+
+        spy_image = mocker.spy(image_mark, 'send_state')
+        spy_x = mocker.spy(scale_x, 'send_state')
+        spy_y = mocker.spy(scale_y, 'send_state')
+
+        self.image.load_image(arr, image_label='second')
+
+        assert spy_image.call_count <= 1
+        assert spy_x.call_count <= 1
+        assert spy_y.call_count <= 1
+
+        # Batching must not change the end state.
+        displayed = np.asarray(image_mark.image)
+        expected = self.image.get_cuts(image_label='second')(arr)
+        np.testing.assert_allclose(displayed, expected)
+        np.testing.assert_allclose(image_mark.x, [-0.5, arr.shape[1] - 0.5])
+        np.testing.assert_allclose(image_mark.y, [-0.5, arr.shape[0] - 0.5])
+
     def test_get_viewport_reflects_interactive_pan(self, data):
         # Panning in the browser shifts the bqplot scales directly. Simulate
         # that here and check that get_viewport reports the new center.
