@@ -98,6 +98,39 @@ class TestBQplotWidget(ImageAPITest):
         displayed = np.asarray(self.image._astro_im._image.image)
         np.testing.assert_allclose(displayed, stretch(cuts(arr)))
 
+    def test_reload_existing_label_keeps_its_settings(self):
+        # When new data is loaded under an existing image label, that
+        # label's own stored settings are the current ones for the image
+        # and must be kept, even if a different image was loaded (and so
+        # displayed) more recently.
+        rng = np.random.default_rng(seed=42)
+        arr = rng.integers(1100, 1300, size=(50, 60)).astype(np.uint16)
+        arr[25, 30] = 65535
+
+        first_cuts = apviz.AsymmetricPercentileInterval(5, 90)
+        first_stretch = apviz.LogStretch()
+        self.image.load_image(arr, image_label='first')
+        self.image.set_cuts(first_cuts, image_label='first')
+        self.image.set_stretch(first_stretch, image_label='first')
+        self.image.set_colormap('viridis', image_label='first')
+
+        self.image.load_image(arr, image_label='second')
+        self.image.set_cuts(apviz.ManualInterval(1100, 1300),
+                            image_label='second')
+        self.image.set_stretch(apviz.SqrtStretch(), image_label='second')
+        self.image.set_colormap('plasma', image_label='second')
+
+        new_arr = arr + 10
+        self.image.load_image(new_arr, image_label='first')
+
+        assert self.image.get_cuts(image_label='first') is first_cuts
+        assert self.image.get_stretch(image_label='first') is first_stretch
+        assert self.image.get_colormap(image_label='first') == 'viridis'
+        assert self.image._astro_im._image.scales['image'].colors == bqcolors('viridis')
+
+        displayed = np.asarray(self.image._astro_im._image.image)
+        np.testing.assert_allclose(displayed, first_stretch(first_cuts(new_arr)))
+
     def test_first_load_stores_widget_default_cuts(self):
         # With nothing loaded yet there are no current settings to carry
         # forward, so the first image should be displayed with the widget's
