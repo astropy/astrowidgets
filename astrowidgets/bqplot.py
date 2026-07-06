@@ -368,6 +368,8 @@ class ImageWidget(ipw.VBox, ImageViewerLogic):
         # brightest pixels at the top.
         self._default_cuts = apviz.AsymmetricPercentileInterval(30, 96)
         self._default_stretch = None
+        self._default_colormap = 'Greys_r'
+        self._astro_im.set_color(bqcolors(self._default_colormap))
 
         self._data = None
         self._wcs = None
@@ -583,6 +585,11 @@ class ImageWidget(ipw.VBox, ImageViewerLogic):
 
         self._data = data.data if isinstance(data, NDData) else data
         self._refresh_display(image_label=image_label, reset_view=True)
+
+        # The API layer does not store a colormap on load, so record the
+        # default so that get_colormap reports what is displayed.
+        if self.get_colormap(image_label=image_label) is None:
+            self.set_colormap(self._default_colormap, image_label=image_label)
 
     # Saving contents of the view and accessing the view
     def save(self, filename, overwrite=False, **kwargs):
