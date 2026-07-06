@@ -161,13 +161,22 @@ class _AstroImage(ipw.VBox):
     @contextmanager
     def _hold_all_sync(self):
         """
-        Batch trait sync messages for the image mark and both scales so
-        that the front end receives a single state update per widget,
-        and hence redraws once, instead of redrawing after every trait
-        assignment.
+        Batch trait sync messages for the image mark, its color scale and
+        both axis scales so that the front end receives a single state
+        update per widget, and hence redraws once, instead of redrawing
+        after every trait assignment.
+
+        These are separate widgets, so each still syncs its own message and
+        the front end redraws on each. On exit the contexts release -- and
+        each widget flushes -- in reverse of the order entered here, so the
+        entry order is chosen to make the image mark flush first, then the
+        color scale, then the scales. That way the front end never draws
+        the old image against the new scales (a "refit" flash) nor recolors
+        the old image before the new data arrives.
         """
-        with self._image.hold_sync(), self._scales['x'].hold_sync(), \
-                self._scales['y'].hold_sync():
+        with self._scales['y'].hold_sync(), self._scales['x'].hold_sync(), \
+                self._image.scales['image'].hold_sync(), \
+                self._image.hold_sync():
             yield
 
     def set_data(self, image_data, reset_view=True):
