@@ -71,6 +71,52 @@ class TestBQplotWidget(ImageAPITest):
         assert self.image.get_colormap() == 'Greys_r'
         assert self.image._astro_im._image.scales['image'].colors == greys_r
 
+    def test_load_image_keeps_current_display_settings(self):
+        # Loading a new image should display it with the cuts, stretch and
+        # colormap that are currently in effect, carried forward from the
+        # previously displayed image, and store them for the new image so
+        # that the get_* methods agree with the display. Only the viewport
+        # resets on load.
+        rng = np.random.default_rng(seed=42)
+        arr = rng.integers(1100, 1300, size=(50, 60)).astype(np.uint16)
+        arr[25, 30] = 65535
+
+        self.image.load_image(arr, image_label='first')
+        cuts = apviz.AsymmetricPercentileInterval(5, 90)
+        stretch = apviz.LogStretch()
+        self.image.set_cuts(cuts, image_label='first')
+        self.image.set_stretch(stretch, image_label='first')
+        self.image.set_colormap('viridis', image_label='first')
+
+        self.image.load_image(arr, image_label='second')
+
+        assert self.image.get_cuts(image_label='second') is cuts
+        assert self.image.get_stretch(image_label='second') is stretch
+        assert self.image.get_colormap(image_label='second') == 'viridis'
+        assert self.image._astro_im._image.scales['image'].colors == bqcolors('viridis')
+
+        displayed = np.asarray(self.image._astro_im._image.image)
+        np.testing.assert_allclose(displayed, stretch(cuts(arr)))
+
+    def test_first_load_stores_widget_default_cuts(self):
+        # With nothing loaded yet there are no current settings to carry
+        # forward, so the first image should be displayed with the widget's
+        # default cuts, and those cuts should be stored so that get_cuts
+        # reports what is displayed.
+        rng = np.random.default_rng(seed=42)
+        arr = rng.integers(1100, 1300, size=(50, 60)).astype(np.uint16)
+        arr[25, 30] = 65535
+
+        self.image.load_image(arr)
+
+        cuts = self.image.get_cuts()
+        assert isinstance(cuts, apviz.AsymmetricPercentileInterval)
+        assert cuts.lower_percentile == 30
+        assert cuts.upper_percentile == 96
+
+        displayed = np.asarray(self.image._astro_im._image.image)
+        np.testing.assert_allclose(displayed, cuts(arr))
+
     def test_set_stretch_keeps_stored_cuts(self):
         # Changing the stretch must re-display using the cuts stored for
         # the image, not fall back to the widget's default cuts.
