@@ -1,3 +1,4 @@
+import astropy.visualization as apviz
 import numpy as np
 import pytest
 
@@ -45,6 +46,18 @@ class TestBQplotWidget(ImageAPITest):
         displayed = np.asarray(self.image._astro_im._image.image)
         expected = self.image.get_cuts()(arr)
         np.testing.assert_allclose(displayed, expected)
+
+    def test_default_cuts_are_30_96_percentile(self):
+        # When no cuts are stored or passed, the widget's fallback should
+        # be the 30-96 percentile interval, which cuts out the sky
+        # background and clips only the brightest pixels.
+        rng = np.random.default_rng(seed=42)
+        arr = rng.integers(1100, 1300, size=(50, 60)).astype(np.uint16)
+        arr[25, 30] = 65535
+
+        self.image._data = arr
+        expected = apviz.AsymmetricPercentileInterval(30, 96)(arr)
+        np.testing.assert_allclose(self.image._interval_and_stretch(), expected)
 
     def test_get_viewport_reflects_interactive_pan(self, data):
         # Panning in the browser shifts the bqplot scales directly. Simulate
