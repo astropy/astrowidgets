@@ -382,7 +382,6 @@ class ImageWidget(ipw.VBox, ImageViewerLogic):
         self._print_out = ipw.Output()
 
         self.marker = {'color': 'red', 'radius': 20, 'type': 'square'}
-        self._cuts = apviz.AsymmetricPercentileInterval(1, 99)
 
         self._cursor = ipw.HTML('Coordinates show up here')
 
@@ -539,6 +538,18 @@ class ImageWidget(ipw.VBox, ImageViewerLogic):
             self._astro_im.set_data(self._interval_and_stretch(stretch=stretch, cuts=cuts),
                                     reset_view=reset_view)
 
+    def _refresh_display(self, image_label=None, reset_view=False):
+        """
+        Recompute the displayed array from the cuts and stretch stored
+        for the image and send it to the viewer.
+        """
+        if self._data is None:
+            return
+
+        self._send_data(cuts=self.get_cuts(image_label=image_label),
+                        stretch=self.get_stretch(image_label=image_label),
+                        reset_view=reset_view)
+
     @property
     def _current_image_label(self):
         """
@@ -569,7 +580,7 @@ class ImageWidget(ipw.VBox, ImageViewerLogic):
         data = self.get_image(image_label=image_label)
 
         self._data = data.data if isinstance(data, NDData) else data
-        self._send_data()
+        self._refresh_display(image_label=image_label, reset_view=True)
 
     # Saving contents of the view and accessing the view
     def save(self, filename, overwrite=False, **kwargs):
