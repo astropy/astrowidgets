@@ -188,12 +188,15 @@ class TestBQplotWidget(ImageAPITest):
         arr[25, 30] = 65535
 
         self.image.load_image(arr)
+        # Cuts that differ from the widget default, so that a refresh
+        # falling back to the default cuts produces a different array.
+        cuts = apviz.AsymmetricPercentileInterval(5, 90)
+        self.image.set_cuts(cuts)
         stretch = apviz.LogStretch()
         self.image.set_stretch(stretch)
 
         displayed = np.asarray(self.image._astro_im._image.image)
-        expected = stretch(self.image.get_cuts()(arr))
-        np.testing.assert_allclose(displayed, expected)
+        np.testing.assert_allclose(displayed, stretch(cuts(arr)))
 
     def test_set_cuts_keeps_stored_stretch(self):
         # Changing the cuts must re-display using the stretch stored for
