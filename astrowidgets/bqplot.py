@@ -392,7 +392,10 @@ class ImageWidget(ipw.VBox, ImageViewerLogic):
         self._default_cuts = apviz.AsymmetricPercentileInterval(30, 96)
         self._default_stretch = None
         self._default_colormap = 'Greys_r'
-        self._astro_im.set_color(bqcolors(self._default_colormap))
+        # Store the default through the API layer (which keeps settings
+        # for the None label even before a load) so that get_colormap
+        # reports it; set_colormap also applies it to the front end.
+        self.set_colormap(self._default_colormap)
 
         self._data = None
         self._wcs = None
