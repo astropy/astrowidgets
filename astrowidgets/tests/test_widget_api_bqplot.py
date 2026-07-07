@@ -222,6 +222,11 @@ class TestBQplotWidget(ImageAPITest):
         # Loading should batch the updates so the image mark and each
         # scale send at most one state message.
         self.image.load_image(data, image_label='first')
+        # Cuts that differ from the widget default, so the end-state check
+        # below can tell the carried-forward settings from a fallback to
+        # the defaults.
+        cuts = apviz.AsymmetricPercentileInterval(5, 90)
+        self.image.set_cuts(cuts, image_label='first')
 
         astro_im = self.image._astro_im
         image_mark = astro_im._image
@@ -242,9 +247,9 @@ class TestBQplotWidget(ImageAPITest):
         assert spy_y.call_count <= 1
 
         # Batching must not change the end state.
+        assert self.image.get_cuts(image_label='second') is cuts
         displayed = np.asarray(image_mark.image)
-        expected = self.image.get_cuts(image_label='second')(arr)
-        np.testing.assert_allclose(displayed, expected)
+        np.testing.assert_allclose(displayed, cuts(arr))
         np.testing.assert_allclose(image_mark.x, [-0.5, arr.shape[1] - 0.5])
         np.testing.assert_allclose(image_mark.y, [-0.5, arr.shape[0] - 0.5])
 
