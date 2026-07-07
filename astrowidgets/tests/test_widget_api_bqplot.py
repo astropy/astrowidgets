@@ -161,6 +161,42 @@ class TestBQplotWidget(ImageAPITest):
         displayed = np.asarray(self.image._astro_im._image.image)
         np.testing.assert_allclose(displayed, stretch(cuts(arr2)))
 
+    def test_load_image_without_label_targets_single_labeled_image(self):
+        # An image label of None means "the caller did not specify a
+        # label". Once a labeled image exists, the API layer resolves None
+        # to that label, so an unlabeled load replaces the labeled image
+        # (keeping its settings) and never touches an image stored under
+        # the None label. With two or more labels the target is ambiguous
+        # and the load raises.
+        rng = np.random.default_rng(seed=42)
+        arr = rng.integers(1100, 1300, size=(50, 60)).astype(np.uint16)
+        arr[25, 30] = 65535
+
+        unlabeled_cuts = apviz.AsymmetricPercentileInterval(5, 90)
+        self.image.load_image(arr)
+        self.image.set_cuts(unlabeled_cuts)
+
+        labeled_cuts = apviz.ManualInterval(1100, 1300)
+        self.image.load_image(arr + 1, image_label='labeled')
+        self.image.set_cuts(labeled_cuts, image_label='labeled')
+
+        self.image.load_image(arr + 2)
+
+        # The unlabeled load replaced the labeled image and kept its cuts.
+        np.testing.assert_array_equal(
+            np.asarray(self.image.get_image(image_label='labeled')), arr + 2)
+        assert self.image.get_cuts(image_label='labeled') is labeled_cuts
+
+        # The image stored under the None label kept its own settings.
+        # Once a user label exists, get_cuts(image_label=None) resolves to
+        # that label, so look at the stored settings directly.
+        assert self.image._images[None].cuts is unlabeled_cuts
+
+        # With two user-defined labels an unlabeled load is ambiguous.
+        self.image.load_image(arr, image_label='labeled2')
+        with pytest.raises(ValueError, match='Multiple image labels'):
+            self.image.load_image(arr)
+
     def test_first_load_stores_widget_default_cuts(self):
         # With nothing loaded yet there are no current settings to carry
         # forward, so the first image should be displayed with the widget's
