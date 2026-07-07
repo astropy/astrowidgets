@@ -66,6 +66,7 @@ class TestBQplotWidget(ImageAPITest):
         # report it.
         greys_r = bqcolors('Greys_r')
         assert self.image._astro_im._image.scales['image'].colors == greys_r
+        assert self.image.get_colormap() == 'Greys_r'
 
         self.image.load_image(data)
         assert self.image.get_colormap() == 'Greys_r'
