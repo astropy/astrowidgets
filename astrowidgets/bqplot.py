@@ -1,3 +1,4 @@
+from contextlib import contextmanager
 from pathlib import Path
 
 import numpy as np
@@ -157,19 +158,41 @@ class _AstroImage(ipw.VBox):
             self._scales[reset_scale].max = frozen_width[reset_scale] * scale_factor
             self.center = current_center
 
+    @contextmanager
+    def _hold_all_sync(self):
+        """
+        Batch trait sync messages for the image mark, its color scale and
+        both axis scales so that the front end receives a single state
+        update per widget, and hence redraws once, instead of redrawing
+        after every trait assignment.
+
+        These are separate widgets, so each still syncs its own message and
+        the front end redraws on each. On exit the contexts release -- and
+        each widget flushes -- in reverse of the order entered here, so the
+        entry order is chosen to make the image mark flush first, then the
+        color scale, then the scales. That way the front end never draws
+        the old image against the new scales (a "refit" flash) nor recolors
+        the old image before the new data arrives.
+        """
+        with self._scales['y'].hold_sync(), self._scales['x'].hold_sync(), \
+                self._image.scales['image'].hold_sync(), \
+                self._image.hold_sync():
+            yield
+
     def set_data(self, image_data, reset_view=True):
         self._image_shape = image_data.shape
 
-        if reset_view:
-            self.reset_scale_to_fit_image()
+        with self._hold_all_sync():
+            if reset_view:
+                self.reset_scale_to_fit_image()
 
-        # Set the image data and map it to the bqplot figure so that
-        # cursor location corresponds to the underlying array index.
-        # The offset follows the convention that the index corresponds
-        # to the center of the pixel.
-        self._image.image = image_data
-        self._image.x = [-0.5, self._image_shape[1] - 0.5]
-        self._image.y = [-0.5, self._image_shape[0] - 0.5]
+            # Set the image data and map it to the bqplot figure so that
+            # cursor location corresponds to the underlying array index.
+            # The offset follows the convention that the index corresponds
+            # to the center of the pixel.
+            self._image.image = image_data
+            self._image.x = [-0.5, self._image_shape[1] - 0.5]
+            self._image.y = [-0.5, self._image_shape[0] - 0.5]
 
     @property
     def scale_widths(self):
@@ -364,8 +387,15 @@ class ImageWidget(ipw.VBox, ImageViewerLogic):
 
         self._astro_im = _AstroImage(display_width=display_width,
                                      viewer_aspect_ratio=display_aspect_ratio)
-        self._default_cuts = apviz.MinMaxInterval()
+        # Cut out the sky background at the bottom and clip only the
+        # brightest pixels at the top.
+        self._default_cuts = apviz.AsymmetricPercentileInterval(30, 96)
         self._default_stretch = None
+        self._default_colormap = 'Greys_r'
+        # Store the default through the API layer (which keeps settings
+        # for the None label even before a load) so that get_colormap
+        # reports it; set_colormap also applies it to the front end.
+        self.set_colormap(self._default_colormap)
 
         self._data = None
         self._wcs = None
@@ -377,12 +407,14 @@ class ImageWidget(ipw.VBox, ImageViewerLogic):
         # Guards re-entrancy while we programmatically update the viewport.
         self._updating_viewport = False
 
+        # While True, _refresh_display does nothing; set by _defer_refresh.
+        self._refresh_deferred = False
+
         # Provide an Output widget to which prints can be directed for
         # debugging.
         self._print_out = ipw.Output()
 
         self.marker = {'color': 'red', 'radius': 20, 'type': 'square'}
-        self._cuts = apviz.AsymmetricPercentileInterval(1, 99)
 
         self._cursor = ipw.HTML('Coordinates show up here')
 
@@ -539,6 +571,31 @@ class ImageWidget(ipw.VBox, ImageViewerLogic):
             self._astro_im.set_data(self._interval_and_stretch(stretch=stretch, cuts=cuts),
                                     reset_view=reset_view)
 
+    def _refresh_display(self, image_label=None, reset_view=False):
+        """
+        Recompute the displayed array from the cuts and stretch stored
+        for the image and send it to the viewer.
+        """
+        if self._data is None or self._refresh_deferred:
+            return
+
+        self._send_data(cuts=self.get_cuts(image_label=image_label),
+                        stretch=self.get_stretch(image_label=image_label),
+                        reset_view=reset_view)
+
+    @contextmanager
+    def _defer_refresh(self):
+        """
+        Make _refresh_display a no-op inside the block so that several
+        settings can be stored with a single recomputation of the
+        displayed array. The caller refreshes after the block.
+        """
+        self._refresh_deferred = True
+        try:
+            yield
+        finally:
+            self._refresh_deferred = False
+
     @property
     def _current_image_label(self):
         """
@@ -550,14 +607,13 @@ class ImageWidget(ipw.VBox, ImageViewerLogic):
         super().set_stretch(value, image_label=image_label, **kwargs)
         # Changing the stretch only affects the color mapping, so leave the
         # current viewport (zoom/pan) untouched.
-        self._send_data(stretch=value, reset_view=False)
+        self._refresh_display(image_label=image_label)
 
     def set_cuts(self, value, image_label=None, **kwargs):
         super().set_cuts(value, image_label=image_label, **kwargs)
         # Changing the cuts only affects the color mapping, so leave the
         # current viewport (zoom/pan) untouched.
-        self._send_data(cuts=self.get_cuts(image_label=image_label),
-                        reset_view=False)
+        self._refresh_display(image_label=image_label)
 
     @property
     def viewer(self):
@@ -565,11 +621,54 @@ class ImageWidget(ipw.VBox, ImageViewerLogic):
 
     # The methods, grouped loosely by purpose
     def load_image(self, image, image_label=None, **kwargs):
-        super().load_image(image, image_label=image_label, **kwargs)
-        data = self.get_image(image_label=image_label)
+        # A newly loaded image is always displayed with the current cuts,
+        # stretch and colormap; only the viewport resets. Capture the
+        # current settings before the API layer replaces them with its own
+        # defaults during the load.
+        if image_label is not None and image_label in self._images:
+            # Re-loading an existing image: its own settings are current.
+            settings_label = image_label
+            have_current = True
+        elif self._data is not None:
+            # A new image: carry forward from the displayed image. Its label
+            # is legitimately None when the caller never passed one, so guard
+            # on whether an image is displayed, not on the label's value.
+            settings_label = self._current_image_label
+            have_current = True
+        else:
+            # Nothing has been displayed yet.
+            have_current = False
 
-        self._data = data.data if isinstance(data, NDData) else data
-        self._send_data()
+        if have_current:
+            current_cuts = self.get_cuts(image_label=settings_label)
+            current_stretch = self.get_stretch(image_label=settings_label)
+            current_colormap = self.get_colormap(image_label=settings_label)
+        else:
+            current_cuts = self._default_cuts
+            # Leave the stretch the API layer stores on load (linear).
+            current_stretch = self._default_stretch
+            current_colormap = self._default_colormap
+
+        # Hold the sync so the scale changes from the viewport
+        # initialization in the API layer arrive at the front end in the
+        # same batch as the new image data, avoiding flicker from
+        # intermediate redraws.
+        with self._astro_im._hold_all_sync():
+            # Store the settings for the new image so the get_* methods
+            # report what is displayed. Defer the refresh each setter
+            # triggers; one refresh at the end displays the image.
+            with self._defer_refresh():
+                super().load_image(image, image_label=image_label, **kwargs)
+
+                self.set_cuts(current_cuts, image_label=image_label)
+                if current_stretch is not None:
+                    self.set_stretch(current_stretch, image_label=image_label)
+                self.set_colormap(current_colormap, image_label=image_label)
+
+                data = self.get_image(image_label=image_label)
+                self._data = data.data if isinstance(data, NDData) else data
+
+            self._refresh_display(image_label=image_label, reset_view=True)
 
     # Saving contents of the view and accessing the view
     def save(self, filename, overwrite=False, **kwargs):
