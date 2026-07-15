@@ -5,7 +5,7 @@ import numpy as np
 from astropy.nddata import NDData
 import astropy.visualization as apviz
 
-from bqplot import Figure, LinearScale, Axis, ColorScale, PanZoom, ScatterGL
+from bqplot import Figure, LinearScale, Axis, ColorScale, PanZoom, Scatter
 from bqplot_image_gl import ImageGL
 from bqplot_image_gl.interacts import (MouseInteraction,
                                        keyboard_events, mouse_events)
@@ -323,12 +323,12 @@ class _AstroImage(ipw.VBox):
     def plot_named_markers(self, x, y, mark_id, color='yellow',
                            size=100, shape='circle', **kwd):
         scale_dict = dict(x=self._scales['x'], y=self._scales['y'])
-        sc = ScatterGL(scales=scale_dict,
-                       x=x, y=y,
-                       colors=[color],
-                       default_size=100,
-                       marker=shape,
-                       fill=False)
+        sc = Scatter(scales=scale_dict,
+                     x=np.asarray(x), y=np.asarray(y),
+                     colors=[color],
+                     default_size=size,
+                     marker=shape,
+                     fill=False)
 
         self._scatter_marks[mark_id] = sc
         self._update_marks()
@@ -670,12 +670,8 @@ class ImageWidget(ipw.VBox, ImageViewerLogic):
         **kwargs
     ):
         super().load_catalog(table, **kwargs)
-        catalog_label = kwargs.pop("catalog_label", None)
-        this_catalog = self.get_catalog(catalog_label=catalog_label)
-        self._astro_im.plot_named_markers(
-            this_catalog["x"],
-            this_catalog["y"],
-            str(catalog_label),
+        catalog_label = kwargs.get("catalog_label", None)
+        self.set_catalog_style(
             **self.get_catalog_style(catalog_label=catalog_label)
         )
 
