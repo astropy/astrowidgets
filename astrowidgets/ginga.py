@@ -18,6 +18,7 @@ import ipywidgets as ipyw
 
 # Ginga
 from ginga import ColorDist
+from ginga import cmap as ginga_cmap
 from ginga.AstroImage import AstroImage
 from ginga.canvas.CanvasObject import drawCatalog
 from ginga.web.jupyterw.ImageViewJpw import EnhancedCanvasView
@@ -168,7 +169,11 @@ class ImageWidget(ipyw.VBox, ImageViewerLogic):
         # ImageViewerLogic is a dataclass; we do not run its __init__, so run
         # the post-init hook it would otherwise provide to set up its state.
         ImageViewerLogic.__post_init__(self)
-        self._wcs = None
+
+        # Ginga displays a single image at a time; remember which label is on
+        # screen so per-label settings for other images do not touch the
+        # display (see _is_displayed_label).
+        self._displayed_image_label = None
 
         self._viewer = EnhancedCanvasView(logger=logger)
 
@@ -195,11 +200,8 @@ class ImageWidget(ipyw.VBox, ImageViewerLogic):
         # enable all possible keyboard and pointer operations
         self._viewer.get_bindings().enable_all(True)
 
-        # enable drawing on the canvas (used for catalog markers)
+        # Shapes used to draw catalog markers on the viewer's canvas.
         self.dc = drawCatalog
-        self.canvas = self.dc.DrawingCanvas()
-        self.canvas.enable_draw(True)
-        self.canvas.enable_edit(True)
 
         # Internal interaction-state trackers; all start disabled.
         self._is_marking = False
@@ -321,6 +323,9 @@ class ImageWidget(ipyw.VBox, ImageViewerLogic):
         # viewport, cuts and stretch in our internal state.
         super().load_image(image, image_label=image_label, **kwargs)
 
+        # The just-loaded image is now the one on screen.
+        self._displayed_image_label = self._resolve_image_label(image_label)
+
         # Build a ginga AstroImage from the stored data and show it. The
         # helpers resolve image_label internally, matching the bqplot backend.
         data = self.get_image(image_label=image_label)
@@ -332,6 +337,23 @@ class ImageWidget(ipyw.VBox, ImageViewerLogic):
         self._apply_cuts_to_ginga(image_label)
         self._apply_stretch_to_ginga(image_label)
         self._apply_colormap_to_ginga(image_label)
+
+    def _is_displayed_label(self, image_label):
+        """
+        Return `True` if ``image_label`` refers to the image currently shown
+        in the ginga viewer.
+
+        The ginga viewer shows one image at a time, but the AIDA state stores
+        settings per label. Helpers that push stored state into the live
+        viewer must be skipped when the label refers to a different,
+        not-displayed image; its stored settings are applied when it is next
+        loaded.
+        """
+        try:
+            image_label = self._resolve_image_label(image_label)
+        except ValueError:
+            return False
+        return image_label == self._displayed_image_label
 
     def _build_ginga_image(self, data):
         """
@@ -373,7 +395,7 @@ class ImageWidget(ipyw.VBox, ImageViewerLogic):
 
     def _apply_cuts_to_ginga(self, image_label):
         ginga_image = self._viewer.get_image()
-        if ginga_image is None:
+        if ginga_image is None or not self._is_displayed_label(image_label):
             return
         cuts = self.get_cuts(image_label=image_label)
         # get_cuts always returns a BaseInterval, and get_limits computes the
@@ -393,7 +415,8 @@ class ImageWidget(ipyw.VBox, ImageViewerLogic):
         self._apply_stretch_to_ginga(image_label)
 
     def _apply_stretch_to_ginga(self, image_label):
-        if self._viewer.get_image() is None:
+        if (self._viewer.get_image() is None
+                or not self._is_displayed_label(image_label)):
             return
         stretch = self.get_stretch(image_label=image_label)
         rgbmap = self._viewer.get_rgbmap()
@@ -403,11 +426,18 @@ class ImageWidget(ipyw.VBox, ImageViewerLogic):
         rgbmap.set_dist(_ginga_dist_for_stretch(stretch, rgbmap.get_hash_size()))
 
     def set_colormap(self, map_name, image_label=None, **kwargs):
+        # Ginga only logs (rather than raises) on an unknown colormap name,
+        # which would leave the stored state disagreeing with the display, so
+        # validate the name up front.
+        if map_name not in ginga_cmap.get_names():
+            raise ValueError(f'Colormap {map_name!r} is not a valid ginga '
+                             'colormap name.')
         super().set_colormap(map_name, image_label=image_label, **kwargs)
         self._apply_colormap_to_ginga(image_label)
 
     def _apply_colormap_to_ginga(self, image_label):
-        if self._viewer.get_image() is None:
+        if (self._viewer.get_image() is None
+                or not self._is_displayed_label(image_label)):
             return
         cmap_name = self.get_colormap(image_label=image_label)
         # The colormap defaults to None and is not set on load, so guard
@@ -523,7 +553,8 @@ class ImageWidget(ipyw.VBox, ImageViewerLogic):
         Push the stored viewport (center + fov) into the ginga viewer as a pan
         position and scale.
         """
-        if self._viewer.get_image() is None:
+        if (self._viewer.get_image() is None
+                or not self._is_displayed_label(image_label)):
             return
 
         # Read the stored viewport back in pixel coordinates without going
@@ -565,7 +596,11 @@ class ImageWidget(ipyw.VBox, ImageViewerLogic):
             # appropriate error instead of masking it here.
             return
 
-        if image_label not in self._images or self._viewer.get_image() is None:
+        if (image_label not in self._images
+                or self._viewer.get_image() is None
+                or image_label != self._displayed_image_label):
+            # Only the displayed image can have been interactively panned or
+            # zoomed; the live ginga state belongs to it alone.
             return
 
         # What pan/scale does the currently-stored viewport correspond to?
@@ -783,7 +818,7 @@ class ImageWidget(ipyw.VBox, ImageViewerLogic):
     # ------------------------------------------------------------------
     def save(self, filename, overwrite=False, **kwargs):
         """
-        Save the current image view to the given PNG filename.
+        Save the current image view to the given image file.
 
         Parameters
         ----------

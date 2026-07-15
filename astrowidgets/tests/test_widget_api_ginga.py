@@ -223,6 +223,106 @@ def test_center_on_skycoord_updates_viewport():
     assert center.separation(target).arcsec == pytest.approx(0, abs=1e-3)
 
 
+def _two_image_widget():
+    # A widget with two labeled images; 'b' is the one currently displayed.
+    rng = np.random.default_rng(1234)
+    image = ImageWidget()
+    image.load_image(rng.random((100, 100)), image_label='a')
+    image.load_image(rng.random((100, 100)), image_label='b')
+    return image
+
+
+def test_get_viewport_does_not_corrupt_non_displayed_state():
+    # Reading the viewport of a non-displayed image must not "sync" it from
+    # the live ginga pan/scale, which belongs to a different image.
+    rng = np.random.default_rng(1234)
+    image = ImageWidget()
+    image.load_image(rng.random((256, 256)), image_label='a')
+    image.set_viewport(center=(10, 20), fov=50, image_label='a')
+    # Load a differently-sized image so the live viewer state clearly does
+    # not match the stored viewport for 'a'.
+    image.load_image(rng.random((300, 200)), image_label='b')
+
+    # Read twice: the first call must return the stored values, and it must
+    # not overwrite them, so the second call agrees.
+    for _ in range(2):
+        vport = image.get_viewport(sky_or_pixel='pixel', image_label='a')
+        assert vport['center'][0] == pytest.approx(10)
+        assert vport['center'][1] == pytest.approx(20)
+        assert vport['fov'] == pytest.approx(50)
+
+
+def test_set_cuts_non_displayed_label_leaves_display_alone():
+    image = _two_image_widget()
+
+    displayed_before = image._viewer.get_cut_levels()
+    # 'a' is not displayed, so the live cut levels must not change...
+    image.set_cuts((0, 0.5), image_label='a')
+    assert image._viewer.get_cut_levels() == displayed_before
+    # ...but the stored cuts for 'a' are still updated.
+    stored = image.get_cuts(image_label='a')
+    assert (stored.vmin, stored.vmax) == (0, 0.5)
+
+    # The same call for the displayed image does take effect.
+    image.set_cuts((0, 0.5), image_label='b')
+    assert image._viewer.get_cut_levels() == pytest.approx((0, 0.5))
+
+
+def test_set_stretch_non_displayed_label_leaves_display_alone():
+    image = _two_image_widget()
+
+    dist_before = image._viewer.get_rgbmap().get_dist()
+    # 'a' is not displayed, so the live color distribution must not change.
+    image.set_stretch(LogStretch(500), image_label='a')
+    assert image._viewer.get_rgbmap().get_dist() is dist_before
+
+    # The same call for the displayed image does take effect.
+    image.set_stretch(LogStretch(500), image_label='b')
+    dist = image._viewer.get_rgbmap().get_dist()
+    assert isinstance(dist, ColorDist.LogDist)
+    assert dist.exp == 500
+
+
+def test_set_colormap_non_displayed_label_leaves_display_alone():
+    image = _two_image_widget()
+
+    cmap_before = image._viewer.get_settings().get_setting('color_map').value
+    assert cmap_before != 'viridis'
+    # 'a' is not displayed, so the live colormap must not change...
+    image.set_colormap('viridis', image_label='a')
+    assert (image._viewer.get_settings().get_setting('color_map').value
+            == cmap_before)
+    # ...but the stored colormap for 'a' is still updated.
+    assert image.get_colormap(image_label='a') == 'viridis'
+
+    # The same call for the displayed image does take effect.
+    image.set_colormap('viridis', image_label='b')
+    assert (image._viewer.get_settings().get_setting('color_map').value
+            == 'viridis')
+
+
+def test_set_viewport_non_displayed_label_leaves_display_alone():
+    image = _two_image_widget()
+
+    pan_before = image._viewer.get_pan()
+    scale_before = image._viewer.get_scale()
+    # 'a' is not displayed, so the live pan/scale must not change...
+    image.set_viewport(center=(5, 5), fov=10, image_label='a')
+    assert image._viewer.get_pan() == pytest.approx(pan_before)
+    assert image._viewer.get_scale() == pytest.approx(scale_before)
+    # ...but the stored viewport for 'a' is still updated.
+    vport = image.get_viewport(sky_or_pixel='pixel', image_label='a')
+    assert vport['center'][0] == pytest.approx(5)
+    assert vport['center'][1] == pytest.approx(5)
+    assert vport['fov'] == pytest.approx(10)
+
+
+def test_set_colormap_invalid_name_raises():
+    image = _loaded_widget()
+    with pytest.raises(ValueError, match='not a valid ginga'):
+        image.set_colormap('not-a-real-colormap')
+
+
 class TestGingaWidget(ImageAPITest):
     image_widget_class = ImageWidget
     cursor_error_classes = (ValueError, TraitError)
