@@ -18,6 +18,33 @@ def test_instance():
     assert isinstance(image, ImageViewerInterface)
 
 
+def test_mouse_click_does_not_raise_or_block_callbacks():
+    # Regression test for #206: the built-in click handler referenced
+    # attributes that no longer exist, so any click raised AttributeError
+    # and, because ipywidgets runs on_msg callbacks in registration order
+    # with no exception isolation, blocked user-registered callbacks.
+    image = ImageWidget()
+
+    # A click before any image is loaded should be a no-op.
+    image._mouse_click({'domain': {'x': 3, 'y': 3}})
+
+    image.load_image(np.zeros((10, 10)))
+
+    calls = []
+
+    def user_callback(interaction, event_data, buffers):
+        calls.append(event_data)
+
+    image._astro_im.interaction.on_msg(user_callback)
+
+    # Simulate the comm message a real mouse click produces; this invokes
+    # all registered on_msg callbacks in order, built-in handler first.
+    click_event = {'event': 'click', 'domain': {'x': 3, 'y': 3}}
+    image._astro_im.interaction._handle_custom_msg(click_event, [])
+
+    assert calls == [click_event]
+
+
 class TestBQplotWidget(ImageAPITest):
     image_widget_class = ImageWidget
     cursor_error_classes = (ValueError, TraitError)
