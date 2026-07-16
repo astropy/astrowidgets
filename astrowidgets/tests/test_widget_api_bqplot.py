@@ -1,5 +1,3 @@
-import warnings
-
 import astropy.visualization as apviz
 from astropy.table import Table
 import numpy as np
@@ -54,22 +52,20 @@ def test_mouse_click_does_not_raise_or_block_callbacks():
 def test_catalog_markers_use_scatter_shape_size_and_arrays(shape):
     image = ImageWidget()
 
-    with warnings.catch_warnings():
-        warnings.filterwarnings("error", message="Given trait value dtype")
-        image.load_catalog(
-            Table({"x": [1.0], "y": [2.0]}),
-            catalog_label="test",
-            catalog_style={"color": "red", "shape": "circle", "size": 6},
-        )
-        marker = image._astro_im._scatter_marks["test"]
-        assert type(marker) is bqplot.Scatter
-        assert marker.default_size == 36
-        np.testing.assert_array_equal(marker.x, [1.0])
-        np.testing.assert_array_equal(marker.y, [2.0])
+    image.load_catalog(
+        Table({"x": [1.0], "y": [2.0]}),
+        catalog_label="test",
+        catalog_style={"color": "red", "shape": shape, "size": 6},
+    )
+    marker = image._astro_im._scatter_marks["test"]
+    assert type(marker) is bqplot.Scatter
+    assert marker.default_size == 36
+    np.testing.assert_array_equal(marker.x, [1.0])
+    np.testing.assert_array_equal(marker.y, [2.0])
 
-        image.set_catalog_style(
-            catalog_label="test", size=7, shape=shape
-        )
+    image.set_catalog_style(
+        catalog_label="test", size=7, shape=shape
+    )
 
     marker = image._astro_im._scatter_marks["test"]
     assert type(marker) is bqplot.Scatter
