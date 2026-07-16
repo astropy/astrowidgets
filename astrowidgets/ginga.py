@@ -37,6 +37,17 @@ class _AstropyStretchDist(ColorDist.ColorDistBase):
     Because every astropy stretch maps the unit interval onto itself, the
     stretch evaluated on ginga's 0..1 ramp *is* the lookup table ginga needs,
     so this adapter reproduces any astropy stretch exactly.
+
+    Parameters
+    ----------
+    hashsize : int
+        Size of the lookup table (hash) ginga uses to map normalized data
+        values to color indices.
+    stretch : `~astropy.visualization.BaseStretch`
+        The astropy stretch to reproduce.
+    colorlen : int, optional
+        Length of the color range; passed through to
+        `~ginga.ColorDist.ColorDistBase`.
     """
 
     def __init__(self, hashsize, stretch, colorlen=None):
@@ -44,6 +55,17 @@ class _AstropyStretchDist(ColorDist.ColorDistBase):
         super().__init__(hashsize, colorlen=colorlen)
 
     def calc_hash(self):
+        """
+        Compute the value-to-color lookup table from the astropy stretch.
+
+        Overrides the hook from `~ginga.ColorDist.ColorDistBase`.
+
+        Notes
+        -----
+        This method does not return a value; its side effect is to set
+        ``self.hash`` to the stretch evaluated on ginga's 0..1 ramp, scaled
+        to the color range.
+        """
         base = np.arange(0.0, float(self.hashsize), 1.0) / self.hashsize
         out = np.asarray(self.stretch(base, clip=True), dtype=float)
         out = np.clip(out, 0.0, 1.0)
@@ -53,8 +75,24 @@ class _AstropyStretchDist(ColorDist.ColorDistBase):
         self.check_hash()
 
     def get_dist_pct(self, pct):
-        # Inverse mapping, used to place color-bar ticks. Astropy stretches
-        # expose ``.inverse``; fall back to the identity if one is unavailable.
+        """
+        Map a fraction of the color range back to the value that produces it.
+
+        Overrides the hook from `~ginga.ColorDist.ColorDistBase`; ginga uses
+        this inverse mapping to place color-bar ticks.
+
+        Parameters
+        ----------
+        pct : float or array-like
+            Fraction(s) of the color range, in the interval 0..1.
+
+        Returns
+        -------
+        `numpy.ndarray`
+            Normalized data value(s) in the interval 0..1 whose stretched
+            value is ``pct``. Astropy stretches expose ``.inverse``; if one
+            is unavailable this falls back to the identity.
+        """
         pct = np.asarray(pct, dtype=float)
         try:
             val = np.asarray(self.stretch.inverse(pct), dtype=float)
@@ -63,14 +101,30 @@ class _AstropyStretchDist(ColorDist.ColorDistBase):
         return np.clip(val, 0.0, 1.0)
 
     def __str__(self):
+        """Return the class name of the wrapped astropy stretch."""
         return type(self.stretch).__name__
 
 
 def _ginga_dist_for_stretch(stretch, hashsize):
     """
-    Build a ginga `~ginga.ColorDist.ColorDistBase` reproducing an astropy
-    stretch, honoring its shape parameter.
+    Build a ginga color distribution reproducing an astropy stretch,
+    honoring its shape parameter.
 
+    Parameters
+    ----------
+    stretch : `~astropy.visualization.BaseStretch`
+        The astropy stretch to reproduce.
+    hashsize : int
+        Size of the color-distribution lookup table, as reported by the
+        rgbmap's ``get_hash_size``.
+
+    Returns
+    -------
+    `~ginga.ColorDist.ColorDistBase`
+        A fully parametrized ginga color distribution.
+
+    Notes
+    -----
     Ginga's parametrized distributions are reparametrizations of astropy's
     stretches, so where ginga has the family we configure its native class:
     the hyperbolic families match exactly, while log/power match the curve
@@ -107,8 +161,21 @@ def _ginga_dist_for_stretch(stretch, hashsize):
 
 def docs_from_super_if_missing(cls):
     """
-    Decorator to copy the docstrings from the interface methods to the
-    methods in the class.
+    Class decorator that fills in missing docstrings from the AIDA interface.
+
+    Public methods of the decorated class that lack a docstring receive the
+    docstring of the same-named method on
+    `~astro_image_display_api.image_viewer_logic.ImageViewerLogic`.
+
+    Parameters
+    ----------
+    cls : type
+        The class being decorated.
+
+    Returns
+    -------
+    type
+        The same class, with missing docstrings filled in.
     """
     for name, method in cls.__dict__.items():
         if not name.startswith("_"):
@@ -267,7 +334,18 @@ class ImageWidget(ipyw.VBox, ImageViewerLogic):
     # ------------------------------------------------------------------
     def _mouse_move_cb(self, viewer, button, data_x, data_y):
         """
-        Callback to display the cursor position (and value) in the readout.
+        Display the cursor position (and image value) in the readout.
+
+        Callback registered for ginga's ``cursor-changed`` event.
+
+        Parameters
+        ----------
+        viewer : `~ginga.web.jupyterw.ImageViewJpw.EnhancedCanvasView`
+            The ginga viewer that fired the event.
+        button : int
+            State of the mouse buttons (unused).
+        data_x, data_y : float
+            Cursor position, in data (pixel) coordinates.
         """
         if self.cursor is None:  # no-op
             return
@@ -296,7 +374,19 @@ class ImageWidget(ipyw.VBox, ImageViewerLogic):
 
     def _mouse_click_cb(self, viewer, event, data_x, data_y):
         """
-        Callback to handle mouse clicks for marking or centering.
+        Handle a mouse click, either adding a marker or centering the view.
+
+        Callback registered for ginga's ``cursor-down`` event; what it does
+        depends on the ``is_marking`` and ``click_center`` settings.
+
+        Parameters
+        ----------
+        viewer : `~ginga.web.jupyterw.ImageViewJpw.EnhancedCanvasView`
+            The ginga viewer that fired the event.
+        event : object
+            The ginga event (unused).
+        data_x, data_y : float
+            Click position, in data (pixel) coordinates.
         """
         if self.is_marking:
             self._append_interactive_marker(data_x, data_y)
@@ -332,9 +422,22 @@ class ImageWidget(ipyw.VBox, ImageViewerLogic):
 
     def _is_displayed_label(self, image_label):
         """
-        Return `True` if ``image_label`` refers to the image currently shown
-        in the ginga viewer.
+        Whether ``image_label`` refers to the image currently on screen.
 
+        Parameters
+        ----------
+        image_label : str or None
+            Image label to check, resolved the same way as in the AIDA
+            logic (so `None` is allowed when only one image is loaded).
+
+        Returns
+        -------
+        bool
+            `True` if the label resolves to the displayed image, `False` if
+            it refers to a different image or cannot be resolved.
+
+        Notes
+        -----
         The ginga viewer shows one image at a time, but the AIDA state stores
         settings per label. Helpers that push stored state into the live
         viewer must be skipped when the label refers to a different,
@@ -349,8 +452,18 @@ class ImageWidget(ipyw.VBox, ImageViewerLogic):
 
     def _build_ginga_image(self, data):
         """
-        Build a ginga `~ginga.AstroImage.AstroImage` from stored image data,
-        carrying over the WCS when one is available.
+        Build a ginga image from stored image data.
+
+        Parameters
+        ----------
+        data : `~astropy.nddata.NDData` or array-like
+            The image data. For ``NDData`` input, the WCS (when present) is
+            carried over to the ginga image.
+
+        Returns
+        -------
+        `~ginga.AstroImage.AstroImage`
+            The ginga image, ready to be shown with ``set_image``.
         """
         image = AstroImage(logger=self.logger)
 
@@ -386,6 +499,15 @@ class ImageWidget(ipyw.VBox, ImageViewerLogic):
         self._apply_cuts_to_ginga(image_label)
 
     def _apply_cuts_to_ginga(self, image_label):
+        """
+        Push the stored cut levels for a label into the ginga viewer.
+
+        Parameters
+        ----------
+        image_label : str or None
+            Label whose stored cuts to apply. A no-op unless the label
+            refers to the displayed image.
+        """
         ginga_image = self._viewer.get_image()
         if ginga_image is None or not self._is_displayed_label(image_label):
             return
@@ -407,6 +529,15 @@ class ImageWidget(ipyw.VBox, ImageViewerLogic):
         self._apply_stretch_to_ginga(image_label)
 
     def _apply_stretch_to_ginga(self, image_label):
+        """
+        Push the stored stretch for a label into the ginga viewer.
+
+        Parameters
+        ----------
+        image_label : str or None
+            Label whose stored stretch to apply. A no-op unless the label
+            refers to the displayed image.
+        """
         if (self._viewer.get_image() is None
                 or not self._is_displayed_label(image_label)):
             return
@@ -428,6 +559,15 @@ class ImageWidget(ipyw.VBox, ImageViewerLogic):
         self._apply_colormap_to_ginga(image_label)
 
     def _apply_colormap_to_ginga(self, image_label):
+        """
+        Push the stored colormap for a label into the ginga viewer.
+
+        Parameters
+        ----------
+        image_label : str or None
+            Label whose stored colormap to apply. A no-op unless the label
+            refers to the displayed image and a colormap has been set.
+        """
         if (self._viewer.get_image() is None
                 or not self._is_displayed_label(image_label)):
             return
@@ -473,6 +613,19 @@ class ImageWidget(ipyw.VBox, ImageViewerLogic):
     def _make_marker(self, style):
         """
         Build a ginga drawing-object factory from a catalog style dict.
+
+        Parameters
+        ----------
+        style : dict
+            Catalog style, as returned by ``get_catalog_style``. The keys
+            ``shape``, ``color``, ``size`` and ``linewidth`` are used;
+            unrecognized shapes fall back to a circle.
+
+        Returns
+        -------
+        callable
+            A factory accepting ``x``, ``y`` and ``coord`` keyword arguments
+            that returns a ginga canvas object.
         """
         shape = style.get('shape', 'circle')
         color = style.get('color', 'red')
@@ -492,8 +645,14 @@ class ImageWidget(ipyw.VBox, ImageViewerLogic):
 
     def _draw_catalog(self, catalog_label):
         """
-        Draw (or redraw) a catalog's markers on the ginga canvas under a tag
-        derived from the catalog label.
+        Draw (or redraw) a catalog's markers on the ginga canvas.
+
+        Parameters
+        ----------
+        catalog_label : str or None
+            Label of the catalog to draw. Its markers are drawn under a
+            canvas tag derived from the resolved label, replacing any
+            previous drawing for that catalog.
         """
         tag = str(self._resolve_catalog_label(catalog_label))
 
@@ -527,6 +686,8 @@ class ImageWidget(ipyw.VBox, ImageViewerLogic):
         The window dimension (in screen pixels) used to convert between a
         pixel field of view and a ginga scale.
 
+        Notes
+        -----
         Ginga scales the image isotropically (the same screen-pixels-per-data-
         pixel in both directions), so we define the field of view as the
         *horizontal* extent and always use the window width as the reference
@@ -545,8 +706,14 @@ class ImageWidget(ipyw.VBox, ImageViewerLogic):
 
     def _apply_viewport_to_ginga(self, image_label):
         """
-        Push the stored viewport (center + fov) into the ginga viewer as a pan
-        position and scale.
+        Push the stored viewport (center + fov) into the ginga viewer as a
+        pan position and scale.
+
+        Parameters
+        ----------
+        image_label : str or None
+            Label whose stored viewport to apply. A no-op unless the label
+            refers to the displayed image.
         """
         if (self._viewer.get_image() is None
                 or not self._is_displayed_label(image_label)):
@@ -579,10 +746,20 @@ class ImageWidget(ipyw.VBox, ImageViewerLogic):
 
     def _sync_ginga_to_stored_viewport(self, image_label):
         """
-        Update the stored viewport from the live ginga pan/scale, but only if
-        the user has actually panned or zoomed since we last set it. Skipping
-        the update when nothing has changed keeps programmatically-set values
-        exact (important for sky/pixel round-trips).
+        Update the stored viewport from the live ginga pan/scale.
+
+        Parameters
+        ----------
+        image_label : str or None
+            Label whose stored viewport to update. A no-op unless the label
+            refers to the displayed image.
+
+        Notes
+        -----
+        The stored viewport is only touched if the user has actually panned
+        or zoomed since we last set it. Skipping the update when nothing has
+        changed keeps programmatically-set values exact (important for
+        sky/pixel round-trips).
         """
         try:
             image_label = self._resolve_image_label(image_label)
@@ -631,8 +808,13 @@ class ImageWidget(ipyw.VBox, ImageViewerLogic):
     # ------------------------------------------------------------------
     def _center_on(self, point):
         """
-        Center the view on a point given either as a `~astropy.coordinates.SkyCoord`
-        or as a tuple of pixel ``(X, Y)`` coordinates.
+        Center the view on a point.
+
+        Parameters
+        ----------
+        point : `~astropy.coordinates.SkyCoord` or tuple of float
+            The point to center on, either as a sky coordinate or as pixel
+            ``(X, Y)`` coordinates.
         """
         self.set_viewport(center=point)
 
@@ -793,7 +975,19 @@ class ImageWidget(ipyw.VBox, ImageViewerLogic):
                 self._interactive_points = []
 
     def _validate_marker_name(self, marker_name):
-        """Raise an error if ``marker_name`` is reserved."""
+        """
+        Check that a marker name is not reserved for internal use.
+
+        Parameters
+        ----------
+        marker_name : str
+            The name to validate.
+
+        Raises
+        ------
+        ValueError
+            If ``marker_name`` is one of ``RESERVED_MARKER_SET_NAMES``.
+        """
         if marker_name in self.RESERVED_MARKER_SET_NAMES:
             raise ValueError('The marker name {} is not allowed. Any name is '
                              'allowed except these: '
@@ -801,7 +995,14 @@ class ImageWidget(ipyw.VBox, ImageViewerLogic):
                                          ', '.join(self.RESERVED_MARKER_SET_NAMES)))
 
     def _append_interactive_marker(self, x, y):
-        """Add a point to the interactive catalog and redraw it."""
+        """
+        Add a point to the interactive catalog and redraw it.
+
+        Parameters
+        ----------
+        x, y : float
+            Position of the new marker, in data (pixel) coordinates.
+        """
         self._interactive_points.append((x, y))
         table = Table(rows=self._interactive_points, names=['x', 'y'])
         self.load_catalog(table,
@@ -822,6 +1023,11 @@ class ImageWidget(ipyw.VBox, ImageViewerLogic):
 
         overwrite : bool, optional
             If `True`, overwrite an existing file.
+
+        Raises
+        ------
+        FileExistsError
+            If ``filename`` exists and ``overwrite`` is `False`.
         """
         if not overwrite and Path(filename).exists():
             raise FileExistsError(f'File {filename} exists and overwrite=False')
