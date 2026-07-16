@@ -485,15 +485,18 @@ class ImageWidget(ipyw.VBox, ImageViewerLogic):
         shape = style.get('shape', 'circle')
         color = style.get('color', 'red')
         size = style.get('size', 5)
+        linewidth = style.get('linewidth', 1)
 
         if shape in ('square', 'box'):
-            return functools.partial(self.dc.SquareBox, radius=size, color=color)
+            return functools.partial(self.dc.SquareBox, radius=size, color=color,
+                                     linewidth=linewidth)
         elif shape in ('cross', 'plus', 'crosshair'):
             point_style = 'plus' if shape == 'plus' else 'cross'
             return functools.partial(self.dc.Point, radius=size, style=point_style,
-                                     color=color)
+                                     color=color, linewidth=linewidth)
         else:  # circle and anything we do not specifically handle
-            return functools.partial(self.dc.Circle, radius=size, color=color)
+            return functools.partial(self.dc.Circle, radius=size, color=color,
+                                     linewidth=linewidth)
 
     def _draw_catalog(self, catalog_label):
         """
