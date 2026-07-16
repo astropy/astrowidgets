@@ -3,7 +3,6 @@
 # STDLIB
 import functools
 from pathlib import Path
-import warnings
 
 # THIRD-PARTY
 import numpy as np
@@ -158,14 +157,6 @@ class ImageWidget(ipyw.VBox, ImageViewerLogic):
 
     def __init__(self, *args, logger=None, image_width=500, image_height=500,
                  **kwargs):
-        if 'use_opencv' in kwargs:
-            # Pop it so it is not forwarded to VBox, which would raise a
-            # TraitError for an unknown trait.
-            kwargs.pop('use_opencv')
-            warnings.warn("use_opencv kwarg has been deprecated--"
-                          "opencv will be used if it is installed",
-                          DeprecationWarning)
-
         super().__init__(*args, **kwargs)
         # ImageViewerLogic is a dataclass; we do not run its __init__, so run
         # the post-init hook it would otherwise provide to set up its state.

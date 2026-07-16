@@ -67,13 +67,6 @@ def test_widget_kwargs_forwarded_to_vbox():
     assert image.layout.border == '1px solid red'
 
 
-def test_use_opencv_kwarg_warns_not_errors():
-    # The deprecated use_opencv kwarg should warn rather than be forwarded to
-    # VBox (which would raise a TraitError for an unknown trait).
-    with pytest.warns(DeprecationWarning):
-        ImageWidget(use_opencv=True)
-
-
 def test_pixel_offset_removed():
     # The pixel_coords_offset kwarg and pixel_offset property have been
     # removed; the API-approved way to handle this is via the viewport.
