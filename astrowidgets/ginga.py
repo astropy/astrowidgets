@@ -81,28 +81,29 @@ def _ginga_dist_for_stretch(stretch, hashsize):
     ``'power'`` (astropy's ``PowerDistStretch``) -- are handled exactly by
     `_AstropyStretchDist`.
     """
-    if isinstance(stretch, AsinhStretch):
-        factor = 1.0 / stretch.a
-        return ColorDist.AsinhDist(hashsize, factor=factor,
-                                   nonlinearity=np.arcsinh(factor))
-    if isinstance(stretch, SinhStretch):
-        factor = 1.0 / stretch.a
-        return ColorDist.SinhDist(hashsize, factor=factor,
-                                  nonlinearity=np.sinh(factor))
-    if isinstance(stretch, LogStretch):
-        return ColorDist.LogDist(hashsize, exp=stretch.a)
-    if isinstance(stretch, PowerDistStretch):
-        return ColorDist.PowerDist(hashsize, exp=stretch.a)
-    # SquaredStretch subclasses PowerStretch, so check it before any plain
-    # PowerStretch would fall through to the adapter.
-    if isinstance(stretch, SquaredStretch):
-        return ColorDist.SquaredDist(hashsize)
-    if isinstance(stretch, SqrtStretch):
-        return ColorDist.SqrtDist(hashsize)
-    if (isinstance(stretch, LinearStretch)
-            and stretch.slope == 1 and stretch.intercept == 0):
-        return ColorDist.LinearDist(hashsize)
-    return _AstropyStretchDist(hashsize, stretch)
+    match stretch:
+        case AsinhStretch():
+            factor = 1.0 / stretch.a
+            return ColorDist.AsinhDist(hashsize, factor=factor,
+                                       nonlinearity=np.arcsinh(factor))
+        case SinhStretch():
+            factor = 1.0 / stretch.a
+            return ColorDist.SinhDist(hashsize, factor=factor,
+                                      nonlinearity=np.sinh(factor))
+        case LogStretch():
+            return ColorDist.LogDist(hashsize, exp=stretch.a)
+        case PowerDistStretch():
+            return ColorDist.PowerDist(hashsize, exp=stretch.a)
+        # SquaredStretch subclasses PowerStretch, so match it before any
+        # plain PowerStretch would fall through to the adapter.
+        case SquaredStretch():
+            return ColorDist.SquaredDist(hashsize)
+        case SqrtStretch():
+            return ColorDist.SqrtDist(hashsize)
+        case LinearStretch(slope=1, intercept=0):
+            return ColorDist.LinearDist(hashsize)
+        case _:
+            return _AstropyStretchDist(hashsize, stretch)
 
 
 def docs_from_super_if_missing(cls):
