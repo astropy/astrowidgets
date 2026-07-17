@@ -23,7 +23,7 @@ from ginga.canvas.CanvasObject import drawCatalog
 from ginga.web.jupyterw.ImageViewJpw import EnhancedCanvasView
 from ginga.util.wcs import ra_deg_to_str, dec_deg_to_str
 
-from astro_image_display_api.image_viewer_logic import ImageViewerLogic
+from astro_image_display_api import ImageViewerLogic, docs_from_super_if_missing
 
 __all__ = ['ImageWidget']
 
@@ -159,34 +159,6 @@ def _ginga_dist_for_stretch(stretch, hashsize):
             return _AstropyStretchDist(hashsize, stretch)
 
 
-def docs_from_super_if_missing(cls):
-    """
-    Class decorator that fills in missing docstrings from the AIDA interface.
-
-    Public methods of the decorated class that lack a docstring receive the
-    docstring of the same-named method on
-    `~astro_image_display_api.image_viewer_logic.ImageViewerLogic`.
-
-    Parameters
-    ----------
-    cls : type
-        The class being decorated.
-
-    Returns
-    -------
-    type
-        The same class, with missing docstrings filled in.
-    """
-    for name, method in cls.__dict__.items():
-        if not name.startswith("_"):
-            if method.__doc__:
-                continue
-            interface_method = getattr(ImageViewerLogic, name, None)
-            if interface_method:
-                method.__doc__ = interface_method.__doc__
-    return cls
-
-
 # The inheritance order below matters -- VBox needs to come first
 @docs_from_super_if_missing
 class ImageWidget(ipyw.VBox, ImageViewerLogic):
@@ -228,11 +200,6 @@ class ImageWidget(ipyw.VBox, ImageViewerLogic):
         # ImageViewerLogic is a dataclass; we do not run its __init__, so run
         # the post-init hook it would otherwise provide to set up its state.
         ImageViewerLogic.__post_init__(self)
-
-        # Ginga displays a single image at a time; remember which label is on
-        # screen so per-label settings for other images do not touch the
-        # display (see _is_displayed_label).
-        self._displayed_image_label = None
 
         self._viewer = EnhancedCanvasView(logger=logger)
 
@@ -398,57 +365,24 @@ class ImageWidget(ipyw.VBox, ImageViewerLogic):
                 print('Centered on X={} Y={}'.format(data_x, data_y))
 
     # ------------------------------------------------------------------
-    # Image loading
+    # Image rendering
     # ------------------------------------------------------------------
-    def load_image(self, image, image_label=None, **kwargs):
-        # Let the AIDA logic store the data + WCS and set up the initial
-        # viewport, cuts and stretch in our internal state.
-        super().load_image(image, image_label=image_label, **kwargs)
-
-        # The just-loaded image is now the one on screen.
-        self._displayed_image_label = self._resolve_image_label(image_label)
-
-        # Build a ginga AstroImage from the stored data and show it. The
-        # helpers resolve image_label internally, matching the bqplot backend.
-        data = self.get_image(image_label=image_label)
-        self._viewer.set_image(self._build_ginga_image(data))
-
-        # Apply the stored viewport, cuts, stretch and colormap to the freshly
-        # displayed image.
-        self._apply_viewport_to_ginga(image_label)
-        self._apply_cuts_to_ginga(image_label)
-        self._apply_stretch_to_ginga(image_label)
-        self._apply_colormap_to_ginga(image_label)
-
-    def _is_displayed_label(self, image_label):
+    def _render_image(self, image_label):
         """
-        Whether ``image_label`` refers to the image currently on screen.
+        Show the image stored under a label in the ginga viewer.
+
+        Overrides the no-op rendering hook from
+        `~astro_image_display_api.ImageViewerLogic.` ``load_image`` calls it
+        after storing the image data and settings; the ``_apply_*`` hooks are
+        called afterwards to push the stored settings into the display.
 
         Parameters
         ----------
-        image_label : str or None
-            Image label to check, resolved the same way as in the AIDA
-            logic (so `None` is allowed when only one image is loaded).
-
-        Returns
-        -------
-        bool
-            `True` if the label resolves to the displayed image, `False` if
-            it refers to a different image or cannot be resolved.
-
-        Notes
-        -----
-        The ginga viewer shows one image at a time, but the AIDA state stores
-        settings per label. Helpers that push stored state into the live
-        viewer must be skipped when the label refers to a different,
-        not-displayed image; its stored settings are applied when it is next
-        loaded.
+        image_label : str
+            Resolved label of the image to display.
         """
-        try:
-            image_label = self._resolve_image_label(image_label)
-        except ValueError:
-            return False
-        return image_label == self._displayed_image_label
+        data = self.get_image(image_label=image_label)
+        self._viewer.set_image(self._build_ginga_image(data))
 
     def _build_ginga_image(self, data):
         """
@@ -492,25 +426,20 @@ class ImageWidget(ipyw.VBox, ImageViewerLogic):
     # ------------------------------------------------------------------
     # Cuts / stretch / colormap
     # ------------------------------------------------------------------
-    def set_cuts(self, value, image_label=None, **kwargs):
-        super().set_cuts(value, image_label=image_label, **kwargs)
-        # Changing the cuts only affects the color mapping, so leave the
-        # current viewport (zoom/pan) untouched.
-        self._apply_cuts_to_ginga(image_label)
-
-    def _apply_cuts_to_ginga(self, image_label):
+    def _apply_cuts(self, image_label):
         """
         Push the stored cut levels for a label into the ginga viewer.
 
+        Overrides the no-op rendering hook from
+        `~astro_image_display_api.ImageViewerLogic`; only called when the
+        label is displayed.
+
         Parameters
         ----------
-        image_label : str or None
-            Label whose stored cuts to apply. A no-op unless the label
-            refers to the displayed image.
+        image_label : str
+            Resolved label whose stored cuts to apply.
         """
         ginga_image = self._viewer.get_image()
-        if ginga_image is None or not self._is_displayed_label(image_label):
-            return
         cuts = self.get_cuts(image_label=image_label)
         # get_cuts always returns a BaseInterval, and get_limits computes the
         # concrete low/high for any interval type (percentile, zscale, etc.),
@@ -518,29 +447,22 @@ class ImageWidget(ipyw.VBox, ImageViewerLogic):
         low, high = cuts.get_limits(ginga_image.get_data())
         self._viewer.cut_levels(low, high)
 
-    def set_stretch(self, value, image_label=None, **kwargs):
-        # The astropy stretch (including its shape parameter) is reproduced in
-        # ginga by configuring the matching native color distribution, or, for
-        # stretches ginga lacks a family for, by an astropy-backed adapter.
-        # See _ginga_dist_for_stretch.
-        super().set_stretch(value, image_label=image_label, **kwargs)
-        # Changing the stretch only affects the color mapping, so leave the
-        # current viewport (zoom/pan) untouched.
-        self._apply_stretch_to_ginga(image_label)
-
-    def _apply_stretch_to_ginga(self, image_label):
+    def _apply_stretch(self, image_label):
         """
         Push the stored stretch for a label into the ginga viewer.
 
+        Overrides the no-op rendering hook from
+        `~astro_image_display_api.ImageViewerLogic`; only called when the
+        label is displayed. The astropy stretch (including its shape
+        parameter) is reproduced in ginga by configuring the matching native
+        color distribution, or, for stretches ginga lacks a family for, by
+        an astropy-backed adapter. See `_ginga_dist_for_stretch`.
+
         Parameters
         ----------
-        image_label : str or None
-            Label whose stored stretch to apply. A no-op unless the label
-            refers to the displayed image.
+        image_label : str
+            Resolved label whose stored stretch to apply.
         """
-        if (self._viewer.get_image() is None
-                or not self._is_displayed_label(image_label)):
-            return
         stretch = self.get_stretch(image_label=image_label)
         rgbmap = self._viewer.get_rgbmap()
         # Inject a fully parametrized distribution; set_dist fires the rgbmap's
@@ -551,26 +473,27 @@ class ImageWidget(ipyw.VBox, ImageViewerLogic):
     def set_colormap(self, map_name, image_label=None, **kwargs):
         # Ginga only logs (rather than raises) on an unknown colormap name,
         # which would leave the stored state disagreeing with the display, so
-        # validate the name up front.
+        # validate the name up front -- even for images that are not
+        # displayed, which the _apply_colormap hook would never see.
         if map_name not in ginga_cmap.get_names():
             raise ValueError(f'Colormap {map_name!r} is not a valid ginga '
                              'colormap name.')
         super().set_colormap(map_name, image_label=image_label, **kwargs)
-        self._apply_colormap_to_ginga(image_label)
 
-    def _apply_colormap_to_ginga(self, image_label):
+    def _apply_colormap(self, image_label):
         """
         Push the stored colormap for a label into the ginga viewer.
 
+        Overrides the no-op rendering hook from
+        `~astro_image_display_api.ImageViewerLogic`; only called when the
+        label is displayed.
+
         Parameters
         ----------
-        image_label : str or None
-            Label whose stored colormap to apply. A no-op unless the label
-            refers to the displayed image and a colormap has been set.
+        image_label : str
+            Resolved label whose stored colormap to apply. A no-op if no
+            colormap has been set for the label.
         """
-        if (self._viewer.get_image() is None
-                or not self._is_displayed_label(image_label)):
-            return
         cmap_name = self.get_colormap(image_label=image_label)
         # The colormap defaults to None and is not set on load, so guard
         # against pushing a None into ginga's set_color_map.
@@ -578,37 +501,26 @@ class ImageWidget(ipyw.VBox, ImageViewerLogic):
             self._viewer.set_color_map(cmap_name)
 
     # ------------------------------------------------------------------
-    # Catalog API
+    # Catalog rendering
     # ------------------------------------------------------------------
-    def load_catalog(self, table, **kwargs):
-        super().load_catalog(table, **kwargs)
-        catalog_label = kwargs.get("catalog_label", None)
-        self._draw_catalog(catalog_label)
+    def _remove_catalog_marks(self, catalog_label):
+        """
+        Remove a catalog's markers from the ginga canvas.
 
-    def set_catalog_style(self, catalog_label=None, shape="circle",
-                          color="red", size=5, **kwargs):
-        super().set_catalog_style(
-            catalog_label=catalog_label, shape=shape, color=color, size=size,
-            **kwargs
-        )
-        self._draw_catalog(catalog_label)
+        Overrides the no-op rendering hook from
+        `~astro_image_display_api.ImageViewerLogic`; ``remove_catalog``
+        calls it once per removed catalog (after expanding ``"*"``).
 
-    def remove_catalog(self, catalog_label=None, **kwargs):
-        # Figure out which canvas tags to remove before the bookkeeping in
-        # super() forgets about them.
-        if catalog_label == "*":
-            tags = [str(label) for label in self._catalogs]
-        else:
-            tags = [str(self._resolve_catalog_label(catalog_label))]
-
-        super().remove_catalog(catalog_label, **kwargs)
-
-        for tag in tags:
-            try:
-                self._viewer.canvas.delete_object_by_tag(tag)
-            except Exception:
-                # Nothing was drawn under this tag; that is fine.
-                pass
+        Parameters
+        ----------
+        catalog_label : str
+            Resolved label of the catalog whose markers to remove.
+        """
+        try:
+            self._viewer.canvas.delete_object_by_tag(str(catalog_label))
+        except Exception:
+            # Nothing was drawn under this tag; that is fine.
+            pass
 
     def _make_marker(self, style):
         """
@@ -647,14 +559,18 @@ class ImageWidget(ipyw.VBox, ImageViewerLogic):
         """
         Draw (or redraw) a catalog's markers on the ginga canvas.
 
+        Overrides the no-op rendering hook from
+        `~astro_image_display_api.ImageViewerLogic`; called by
+        ``load_catalog`` and ``set_catalog_style``.
+
         Parameters
         ----------
-        catalog_label : str or None
-            Label of the catalog to draw. Its markers are drawn under a
-            canvas tag derived from the resolved label, replacing any
+        catalog_label : str
+            Resolved label of the catalog to draw. Its markers are drawn
+            under a canvas tag derived from the label, replacing any
             previous drawing for that catalog.
         """
-        tag = str(self._resolve_catalog_label(catalog_label))
+        tag = str(catalog_label)
 
         # Remove any existing drawing for this catalog before redrawing.
         try:
@@ -697,28 +613,20 @@ class ImageWidget(ipyw.VBox, ImageViewerLogic):
         """
         return self._viewer.get_window_size()[0]
 
-    def set_viewport(self, center=None, fov=None, image_label=None, **kwargs):
-        # The AIDA logic handles all of the WCS bookkeeping (and validation),
-        # which we need in case center/fov are in sky coordinates.
-        super().set_viewport(center=center, fov=fov, image_label=image_label,
-                             **kwargs)
-        self._apply_viewport_to_ginga(image_label)
-
-    def _apply_viewport_to_ginga(self, image_label):
+    def _apply_viewport(self, image_label):
         """
         Push the stored viewport (center + fov) into the ginga viewer as a
         pan position and scale.
 
+        Overrides the no-op rendering hook from
+        `~astro_image_display_api.ImageViewerLogic`; only called when the
+        label is displayed.
+
         Parameters
         ----------
-        image_label : str or None
-            Label whose stored viewport to apply. A no-op unless the label
-            refers to the displayed image.
+        image_label : str
+            Resolved label whose stored viewport to apply.
         """
-        if (self._viewer.get_image() is None
-                or not self._is_displayed_label(image_label)):
-            return
-
         # Read the stored viewport back in pixel coordinates without going
         # through our own get_viewport (which would try to sync ginga state).
         viewport = super().get_viewport(sky_or_pixel='pixel',
@@ -770,7 +678,7 @@ class ImageWidget(ipyw.VBox, ImageViewerLogic):
 
         if (image_label not in self._images
                 or self._viewer.get_image() is None
-                or image_label != self._displayed_image_label):
+                or image_label not in self._displayed_image_labels):
             # Only the displayed image can have been interactively panned or
             # zoomed; the live ginga state belongs to it alone.
             return
