@@ -5,6 +5,8 @@ readme = "README.rst"
 authors = [
     { name = "Astropy Developers", email = "mattwcraig@gmail.com"},
 ]
+license = "BSD 3-Clause"
+license-files = ["LICENSE.rst"]
 keywords = [
     "astronomy",
     "python",
@@ -39,11 +41,6 @@ test = [
 docs = [
     "sphinx-astropy",
 ]
-
-[project.license]
-license = "MIT"
-file = "LICENSE.rst"
-content-type = "text/plain"
 
 [build-system]
 requires = ["setuptools",
