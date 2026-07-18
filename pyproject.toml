@@ -102,7 +102,7 @@ exclude_lines = [
 
 [tool.pixi.workspace]
 channels = ["conda-forge"]
-platforms = ["linux-64"]
+platforms = ["linux-64", "osx-64", "osx-arm64", "win-64"]
 
 [tool.pixi.pypi-dependencies]
 astrowidgets = { path = ".", editable = true }
@@ -123,4 +123,5 @@ pytest-cov = ">=7.1.0,<8"
 pytest-mock = ">=3.15.1,<4"
 
 [tool.pixi.dependencies]
-nodejs = ">=26.5.0,<26.6"
+nodejs = ">=26.4.0,<26.6"
+
