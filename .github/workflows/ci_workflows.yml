@@ -101,7 +101,19 @@ jobs:
       working-directory: downstream
       run: |
         pixi add numpy scipy astropy ipywidgets
-        pixi add --pypi "../"
+        pixi add --pypi "astrowidgets @ file://$GITHUB_WORKSPACE"
+    - name: Add local package (Windows)
+      if: runner.os == 'Windows'
+      working-directory: downstream
+      shell: pwsh
+      run: |
+        $uri = "file:///" + ($env:GITHUB_WORKSPACE -replace '\\','/')
+        pixi add --pypi ("astrowidgets @ " + $uri)
+    - name: Add local package (Unix)
+      if: runner.os != 'Windows'
+      working-directory: downstream
+      run: |
+        pixi add --pypi "astrowidgets @ file://$GITHUB_WORKSPACE"
     - name: Install and verify
       working-directory: downstream
       run: |
