@@ -55,8 +55,11 @@ build-backend = 'setuptools.build_meta'
 [tool.setuptools]
 packages = ["astrowidgets"]
 
-[tool.flake8]
-extend-ignore = ["E501", "W503"]
+[tool.ruff]
+line-length = 79
+
+[tool.ruff.lint]
+extend-ignore = ["E501", "E402", "F403"]
 
 [tool.pytest.ini_options]
 astropy_header = true
