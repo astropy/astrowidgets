@@ -32,6 +32,10 @@ dynamic = [
 ]
 requires-python = ">=3.11"
 
+[project.urls]
+Homepage = "https://github.com/astropy/astrowidgets"
+Repository = "https://github.com/astropy/astrowidgets"
+
 [project.optional-dependencies]
 test = [
     "pytest-astropy",

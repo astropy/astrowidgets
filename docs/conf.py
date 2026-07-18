@@ -75,6 +75,7 @@ project = project_metadata.get("name", "astrowidgets")
 author = ", ".join(a["name"] for a in project_metadata.get("authors", []))
 # release = project_metadata.get("version", "")
 copyright = '{0}, {1}'.format(datetime.datetime.now().year, author)
+repo_url = project_metadata.get("urls", {}).get("Repository", "")
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the
@@ -148,6 +149,7 @@ man_pages = [('index', project.lower(), project + u' Documentation',
 
 # -- Options for the edit_on_github extension ---------------------------------
 
+# N.B. setup_cfg is deprecated, use project_metadata instead
 # if eval(setup_cfg.get('edit_on_github')):
 #     extensions += ['sphinx_astropy.ext.edit_on_github']
 
@@ -162,7 +164,7 @@ man_pages = [('index', project.lower(), project + u' Documentation',
 #     edit_on_github_doc_root = "docs"
 
 # -- Resolving issue number to links in changelog -----------------------------
-github_issues_url = 'https://github.com/{0}/issues/'.format(setup_cfg['github_project'])
+github_issues_url = f'{repo_url}/issues/'
 
 # -- Turn on nitpicky mode for sphinx (to warn about references not found) ----
 #
