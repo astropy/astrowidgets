@@ -23,7 +23,7 @@ dependencies = [
     "ipyevents>=0.6.3",
     "jupyterlab>=3",
     "aggdraw",
-    "bqplot>=0.12,<0.13",
+    "bqplot>=0.12,<0.14",
     "bqplot-image-gl",
     "matplotlib",
 ]
