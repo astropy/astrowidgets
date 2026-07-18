@@ -26,7 +26,6 @@
 # be accessible, and the documentation will not build correctly.
 
 import datetime
-import os
 import sys
 from pathlib import Path
 import tomllib
@@ -34,7 +33,8 @@ import tomllib
 from astrowidgets import __version__ as aw_version
 
 try:
-    from sphinx_astropy.conf.v1 import *  # noqa
+    from sphinx_astropy.conf.v1 import *
+    from sphinx_astropy.conf.v1 import rst_epilog, exclude_patterns  # noqa
 except ImportError:
     print(
         "ERROR: the documentation requires the sphinx-astropy package to be installed"
