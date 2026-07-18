@@ -99,3 +99,28 @@ exclude_lines = [
     "pragma: py{ignore_python_version}",
     "def _ipython_key_completions_",
 ]
+
+[tool.pixi.workspace]
+channels = ["conda-forge"]
+platforms = ["linux-64"]
+
+[tool.pixi.pypi-dependencies]
+astrowidgets = { path = ".", editable = true }
+
+[tool.pixi.environments]
+default = { solve-group = "default" }
+docs = { features = ["docs"], solve-group = "default" }
+test = { features = ["test"], solve-group = "default" }
+
+[tool.pixi.tasks]
+# run unit tests with `pixi run test`
+test = { cmd = "pytest", default-environment = "test" }
+
+[tool.pixi.feature.test.dependencies]
+pytest = ">=9.1.1,<10"
+pytest-astropy = ">=0.11.0,<0.12"
+pytest-cov = ">=7.1.0,<8"
+pytest-mock = ">=3.15.1,<4"
+
+[tool.pixi.dependencies]
+nodejs = ">=26.5.0,<26.6"

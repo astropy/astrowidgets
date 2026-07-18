@@ -27,6 +27,31 @@ conda installation::
     # Optional, but avoids a rebuild when you open lab
     jupyter lab build
 
+Install with pixi
+-----------------
+
+`pixi <https://pixi.sh>`_ provides a reproducible environment using conda-forge.
+
+To create the environment and install dependencies::
+
+    pixi install
+
+To run Python commands inside the environment::
+
+    pixi run python -c "import astrowidgets"
+
+To run the test suite (uses the configured test environment)::
+
+    pixi run test
+
+.. note::
+
+    Pixi installs all required dependencies, including ``nodejs`` for JupyterLab,
+    so no separate Node.js installation is needed.
+    The project is installed in editable mode via Pixi configuration.
+    If you encounter import issues, ensure the environment is up to date
+    by re-running ``pixi install``.
+
 .. note::
 
     If you are using a virtual environment and
