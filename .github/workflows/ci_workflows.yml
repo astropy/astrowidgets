@@ -101,7 +101,7 @@ jobs:
       working-directory: downstream
       run: |
         pixi add numpy scipy astropy ipywidgets
-        pixi add --pypi "astrowidgets @ file://$GITHUB_WORKSPACE"
+        pixi add --pypi "../"
     - name: Install and verify
       working-directory: downstream
       run: |
