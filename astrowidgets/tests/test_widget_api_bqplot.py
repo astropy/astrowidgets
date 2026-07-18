@@ -91,9 +91,9 @@ def test_catalog_marks_use_resolved_label():
     assert image._astro_im._scatter_marks == {}
 
 
-def test_catalog_generated_label_targets_marks():
-    # A catalog loaded without a label gets a generated label; styling or
-    # removing it by that generated label must target its marks.
+def test_catalog_default_label_targets_marks():
+    # A catalog loaded without a label goes under the shared default
+    # label; styling or removing it by that label must target its marks.
     image = ImageWidget()
     image.load_catalog(Table({'x': [1.0], 'y': [2.0]}))
 
@@ -231,9 +231,9 @@ class TestBQplotWidget(ImageAPITest):
     def test_load_image_keeps_settings_without_labels(self):
         # The carry-forward of cuts, stretch and colormap must work in the
         # common interactive case where no image_label is ever passed, so
-        # every image gets a generated label. Loading a second image must
-        # display it with the settings currently in effect, not fall back
-        # to the widget defaults.
+        # every load targets the shared default label. Loading a second
+        # image must display it with the settings currently in effect, not
+        # fall back to the widget defaults.
         rng = np.random.default_rng(seed=42)
         arr = rng.integers(1100, 1300, size=(50, 60)).astype(np.uint16)
         arr[25, 30] = 65535
@@ -250,8 +250,8 @@ class TestBQplotWidget(ImageAPITest):
         arr2[10, 15] = 65535
         self.image.load_image(arr2)
 
-        # Both images stay loaded under generated labels, so the get_*
-        # methods need a label; ask about the displayed (new) image.
+        # The second load replaced the first under the shared default
+        # label, keeping the settings attached to that label.
         displayed_label = self.image._displayed_image_labels[0]
         assert self.image.get_cuts(image_label=displayed_label) is cuts
         assert self.image.get_stretch(image_label=displayed_label) is stretch
@@ -261,11 +261,13 @@ class TestBQplotWidget(ImageAPITest):
         displayed = np.asarray(self.image._astro_im._image.image)
         np.testing.assert_allclose(displayed, stretch(cuts(arr2)))
 
-    def test_load_image_without_label_never_replaces(self):
-        # An unlabeled load gets a generated label, so it can never
-        # silently replace a previously loaded image: the labeled image
-        # keeps its data and settings, while the new image takes over the
-        # display with the widget's default settings.
+    def test_load_image_without_label_targets_default_label(self):
+        # An unlabeled load resolves to the shared default label, so it
+        # never silently replaces an explicitly labeled image: the labeled
+        # image keeps its data and settings, while the new image takes
+        # over the display with the widget's default settings. Repeated
+        # unlabeled loads, though, replace each other under that one
+        # default label.
         rng = np.random.default_rng(seed=42)
         arr = rng.integers(1100, 1300, size=(50, 60)).astype(np.uint16)
         arr[25, 30] = 65535
@@ -281,7 +283,7 @@ class TestBQplotWidget(ImageAPITest):
             np.asarray(self.image.get_image(image_label='labeled')), arr)
         assert self.image.get_cuts(image_label='labeled') is labeled_cuts
 
-        # ...and the new image is displayed, under a generated label, with
+        # ...and the new image is displayed, under the default label, with
         # the widget's default cuts rather than the labeled image's.
         new_label = self.image._displayed_image_labels[0]
         assert new_label != 'labeled'
@@ -292,6 +294,14 @@ class TestBQplotWidget(ImageAPITest):
         assert isinstance(new_cuts, apviz.AsymmetricPercentileInterval)
         assert new_cuts.lower_percentile == 30
         assert new_cuts.upper_percentile == 96
+
+        # A further unlabeled load replaces the previous unlabeled image
+        # in place: same label, new data, no third image.
+        self.image.load_image(arr + 5)
+        assert self.image._displayed_image_labels[0] == new_label
+        np.testing.assert_array_equal(
+            np.asarray(self.image.get_image(image_label=new_label)), arr + 5)
+        assert sorted(self.image.image_labels) == sorted(('labeled', new_label))
 
     def test_first_load_stores_widget_default_cuts(self):
         # With nothing loaded yet there are no current settings to carry
