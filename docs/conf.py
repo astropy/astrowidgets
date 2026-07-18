@@ -28,7 +28,8 @@
 import datetime
 import os
 import sys
-from configparser import ConfigParser
+from pathlib import Path
+import tomllib
 
 from astrowidgets import __version__ as aw_version
 
@@ -38,11 +39,13 @@ except ImportError:
     print('ERROR: the documentation requires the sphinx-astropy package to be installed')
     sys.exit(1)
 
-# Get configuration information from setup.cfg
-conf = ConfigParser()
+# Get configuration information from pyproject.toml
+pyproject_path = Path(__file__).resolve().parents[1] / "pyproject.toml"
 
-conf.read([os.path.join(os.path.dirname(__file__), '..', 'setup.cfg')])
-setup_cfg = dict(conf.items('metadata'))
+with open(pyproject_path, "rb") as f:
+    pyproject = tomllib.load(f)
+
+project_metadata = pyproject.get("project", {})
 
 # -- General configuration ----------------------------------------------------
 
@@ -68,8 +71,9 @@ rst_epilog += """
 # -- Project information ------------------------------------------------------
 
 # This does not *have* to match the package name, but typically does
-project = setup_cfg['name']
-author = setup_cfg['author']
+project = project_metadata.get("name", "astrowidgets")
+author = ", ".join(a["name"] for a in project_metadata.get("authors", []))
+# release = project_metadata.get("version", "")
 copyright = '{0}, {1}'.format(datetime.datetime.now().year, author)
 
 # The version info for the project you're documenting, acts as replacement for
