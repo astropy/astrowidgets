@@ -28,7 +28,7 @@ conda installation::
     jupyter lab build
 
 Install with pixi (development)
-------------------------------
+---------------------------------
 
 `pixi <https://pixi.sh>`_ can be used to create a reproducible development
 environment for this repository.
