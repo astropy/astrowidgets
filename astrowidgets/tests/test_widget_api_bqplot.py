@@ -46,7 +46,9 @@ def test_mouse_click_does_not_raise_or_block_callbacks():
     assert calls == [click_event]
 
 
-@pytest.mark.parametrize("shape", ["circle", "square", "crosshair", "plus", "diamond"])
+@pytest.mark.parametrize(
+    "shape", ["circle", "square", "crosshair", "plus", "diamond"]
+)
 def test_catalog_markers_use_scatter_shape_size_and_arrays(shape):
     image = ImageWidget()
 
@@ -74,13 +76,15 @@ class TestBQplotWidget(ImageAPITest):
     cursor_error_classes = (ValueError, TraitError)
 
     @pytest.mark.skip(
-        reason="Saving is done in javascript and requires " "a running browser."
+        reason="Saving is done in javascript and requires "
+        "a running browser."
     )
     def test_save(self, tmp_path):
         pass
 
     @pytest.mark.skip(
-        reason="Saving is done in javascript and requires " "a running browser."
+        reason="Saving is done in javascript and requires "
+        "a running browser."
     )
     def test_save_overwrite(self, tmp_path):
         pass
@@ -110,7 +114,9 @@ class TestBQplotWidget(ImageAPITest):
 
         self.image._data = arr
         expected = apviz.AsymmetricPercentileInterval(30, 96)(arr)
-        np.testing.assert_allclose(self.image._interval_and_stretch(), expected)
+        np.testing.assert_allclose(
+            self.image._interval_and_stretch(), expected
+        )
 
     def test_default_colormap_is_greys_r(self, data):
         # With no colormap explicitly set, the display should use Greys_r
@@ -147,7 +153,9 @@ class TestBQplotWidget(ImageAPITest):
         assert self.image.get_cuts(image_label="second") is cuts
         assert self.image.get_stretch(image_label="second") is stretch
         assert self.image.get_colormap(image_label="second") == "viridis"
-        assert self.image._astro_im._image.scales["image"].colors == bqcolors("viridis")
+        assert self.image._astro_im._image.scales["image"].colors == bqcolors(
+            "viridis"
+        )
 
         displayed = np.asarray(self.image._astro_im._image.image)
         np.testing.assert_allclose(displayed, stretch(cuts(arr)))
@@ -169,7 +177,9 @@ class TestBQplotWidget(ImageAPITest):
         self.image.set_colormap("viridis", image_label="first")
 
         self.image.load_image(arr, image_label="second")
-        self.image.set_cuts(apviz.ManualInterval(1100, 1300), image_label="second")
+        self.image.set_cuts(
+            apviz.ManualInterval(1100, 1300), image_label="second"
+        )
         self.image.set_stretch(apviz.SqrtStretch(), image_label="second")
         self.image.set_colormap("plasma", image_label="second")
 
@@ -179,10 +189,14 @@ class TestBQplotWidget(ImageAPITest):
         assert self.image.get_cuts(image_label="first") is first_cuts
         assert self.image.get_stretch(image_label="first") is first_stretch
         assert self.image.get_colormap(image_label="first") == "viridis"
-        assert self.image._astro_im._image.scales["image"].colors == bqcolors("viridis")
+        assert self.image._astro_im._image.scales["image"].colors == bqcolors(
+            "viridis"
+        )
 
         displayed = np.asarray(self.image._astro_im._image.image)
-        np.testing.assert_allclose(displayed, first_stretch(first_cuts(new_arr)))
+        np.testing.assert_allclose(
+            displayed, first_stretch(first_cuts(new_arr))
+        )
 
     def test_load_image_keeps_settings_without_labels(self):
         # The carry-forward of cuts, stretch and colormap must work in the
@@ -209,7 +223,9 @@ class TestBQplotWidget(ImageAPITest):
         assert self.image.get_cuts() is cuts
         assert self.image.get_stretch() is stretch
         assert self.image.get_colormap() == "viridis"
-        assert self.image._astro_im._image.scales["image"].colors == bqcolors("viridis")
+        assert self.image._astro_im._image.scales["image"].colors == bqcolors(
+            "viridis"
+        )
 
         displayed = np.asarray(self.image._astro_im._image.image)
         np.testing.assert_allclose(displayed, stretch(cuts(arr2)))
