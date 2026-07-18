@@ -36,7 +36,9 @@ from astrowidgets import __version__ as aw_version
 try:
     from sphinx_astropy.conf.v1 import *  # noqa
 except ImportError:
-    print('ERROR: the documentation requires the sphinx-astropy package to be installed')
+    print(
+        "ERROR: the documentation requires the sphinx-astropy package to be installed"
+    )
     sys.exit(1)
 
 # Get configuration information from pyproject.toml
@@ -50,7 +52,7 @@ project_metadata = pyproject.get("project", {})
 # -- General configuration ----------------------------------------------------
 
 # By default, highlight as Python 3.
-highlight_language = 'python3'
+highlight_language = "python3"
 
 # If your documentation needs a minimal Sphinx version, state it here.
 # needs_sphinx = '1.2'
@@ -61,7 +63,7 @@ highlight_language = 'python3'
 
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
-exclude_patterns.append('_templates')  # noqa
+exclude_patterns.append("_templates")  # noqa
 
 # This is added to the end of RST files - a good place to put substitutions to
 # be used globally.
@@ -74,7 +76,7 @@ rst_epilog += """
 project = project_metadata.get("name", "astrowidgets")
 author = ", ".join(a["name"] for a in project_metadata.get("authors", []))
 # release = project_metadata.get("version", "")
-copyright = '{0}, {1}'.format(datetime.datetime.now().year, author)
+copyright = "{0}, {1}".format(datetime.datetime.now().year, author)
 repo_url = project_metadata.get("urls", {}).get("Repository", "")
 
 # The version info for the project you're documenting, acts as replacement for
@@ -84,7 +86,7 @@ repo_url = project_metadata.get("urls", {}).get("Repository", "")
 # The full version, including alpha/beta/rc tags.
 release = aw_version
 # The short X.Y version.
-version = '.'.join(release.split('.')[:2])
+version = ".".join(release.split(".")[:2])
 
 # -- Options for HTML output --------------------------------------------------
 
@@ -105,9 +107,9 @@ version = '.'.join(release.split('.')[:2])
 # html_theme = None
 
 html_theme_options = {
-    'logotext1': 'astro',  # white,  semi-bold
-    'logotext2': 'widgets',  # orange, light
-    'logotext3': ':docs'   # white,  light
+    "logotext1": "astro",  # white,  semi-bold
+    "logotext2": "widgets",  # orange, light
+    "logotext3": ":docs",  # white,  light
 }
 
 # Custom sidebar templates, maps document names to template names.
@@ -128,24 +130,24 @@ html_theme_options = {
 
 # The name for this set of Sphinx documents.  If None, it defaults to
 # "<project> v<release> documentation".
-html_title = '{0} v{1}'.format(project, release)
+html_title = "{0} v{1}".format(project, release)
 
 # Output file base name for HTML help builder.
-htmlhelp_basename = project + 'doc'
+htmlhelp_basename = project + "doc"
 
 # -- Options for LaTeX output -------------------------------------------------
 
 # Grouping the document tree into LaTeX files. List of tuples
 # (source start file, target name, title, author, documentclass [howto/manual]).
-latex_documents = [('index', project + '.tex', project + u' Documentation',
-                    author, 'manual')]
+latex_documents = [
+    ("index", project + ".tex", project + " Documentation", author, "manual")
+]
 
 # -- Options for manual page output -------------------------------------------
 
 # One entry per manual page. List of tuples
 # (source start file, name, description, authors, manual section).
-man_pages = [('index', project.lower(), project + u' Documentation',
-              [author], 1)]
+man_pages = [("index", project.lower(), project + " Documentation", [author], 1)]
 
 # -- Options for the edit_on_github extension ---------------------------------
 
@@ -164,7 +166,7 @@ man_pages = [('index', project.lower(), project + u' Documentation',
 #     edit_on_github_doc_root = "docs"
 
 # -- Resolving issue number to links in changelog -----------------------------
-github_issues_url = f'{repo_url}/issues/'
+github_issues_url = f"{repo_url}/issues/"
 
 # -- Turn on nitpicky mode for sphinx (to warn about references not found) ----
 #
