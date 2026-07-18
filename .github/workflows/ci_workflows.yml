@@ -77,3 +77,25 @@ jobs:
       run: pixi run python -c "import astrowidgets"
     - name: Run tests (pixi)
       run: pixi run test
+
+  pixi-downstream:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Install pixi
+      run: |
+        curl -fsSL https://pixi.sh/install.sh | bash
+        echo "$HOME/.pixi/bin" >> $GITHUB_PATH
+    - name: Create downstream project
+      run: |
+        mkdir downstream && cd downstream
+        pixi init
+    - name: Add dependencies (simulate user env)
+      working-directory: downstream
+      run: |
+        pixi add numpy scipy astropy ipywidgets
+        pixi add --pypi "astrowidgets @ file://$GITHUB_WORKSPACE"
+    - name: Install and verify
+      working-directory: downstream
+      run: |
+        pixi install
+        pixi run python -c "import astrowidgets"
