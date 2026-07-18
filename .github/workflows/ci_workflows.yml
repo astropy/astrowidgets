@@ -61,3 +61,58 @@ jobs:
       run: python -m pip install tox --upgrade
     - name: Run tests
       run: tox -e py313-test-devdeps
+
+  pixi:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
+    - name: Set up pixi
+      uses: prefix-dev/setup-pixi@v0.10.0
+      with:
+        run-install: false
+    - name: Set up pixi environment
+      run: pixi install
+    - name: Verify install
+      run: pixi run python -c "import astrowidgets"
+    - name: Run tests (pixi)
+      run: pixi run test
+
+  pixi-downstream:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
+    - name: Set up pixi
+      uses: prefix-dev/setup-pixi@v0.10.0
+      with:
+        run-install: false
+    - name: Create downstream project
+      run: |
+        mkdir downstream && cd downstream
+        pixi init
+    - name: Add dependencies (simulate user env)
+      working-directory: downstream
+      run: pixi add numpy scipy astropy ipywidgets
+    - name: Add local package (Unix)
+      if: runner.os != 'Windows'
+      working-directory: downstream
+      run: pixi add --pypi "astrowidgets @ file://$GITHUB_WORKSPACE"
+    - name: Add local package (Windows)
+      if: runner.os == 'Windows'
+      working-directory: downstream
+      shell: pwsh
+      run: |
+        $path = $env:GITHUB_WORKSPACE -replace '\\','/'
+        pixi add --pypi ("astrowidgets @ file:///" + $path)
+    - name: Install and verify
+      working-directory: downstream
+      run: |
+        pixi install
+        pixi run python -c "import astrowidgets"

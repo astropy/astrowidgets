@@ -27,6 +27,33 @@ conda installation::
     # Optional, but avoids a rebuild when you open lab
     jupyter lab build
 
+Install with pixi (development)
+---------------------------------
+
+`pixi <https://pixi.sh>`_ can be used to create a reproducible development
+environment for this repository.
+
+To create the environment and install dependencies::
+
+    pixi install
+
+To verify the package imports::
+
+    pixi run python -c "import astrowidgets"
+
+To run the test suite::
+
+    pixi run test
+
+.. note::
+
+    Pixi is used here for development and CI. When installing
+    ``astrowidgets`` into your own Pixi project, you would typically run
+    ``pixi add astrowidgets`` from that project instead.
+
+    The development environment installs dependencies (including ``nodejs``)
+    automatically and installs the package in editable mode.
+
 .. note::
 
     If you are using a virtual environment and
