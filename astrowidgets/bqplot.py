@@ -15,7 +15,10 @@ import ipywidgets as ipw
 from matplotlib import pyplot
 from matplotlib.colors import to_hex
 
-from astro_image_display_api import ImageViewerLogic, docs_from_super_if_missing
+from astro_image_display_api.image_viewer_logic import (
+    ImageViewerLogic,
+    docs_from_image_viewer_logic_if_missing,
+)
 
 
 class _AstroImage(ipw.VBox):
@@ -350,7 +353,7 @@ def bqcolors(colormap, reverse=False):
 
 
 # The inheritance order below matters -- VBox needs to come first
-@docs_from_super_if_missing
+@docs_from_image_viewer_logic_if_missing
 class ImageWidget(ipw.VBox, ImageViewerLogic):
     def __init__(self, *args, display_width=500, display_aspect_ratio=1):
         super().__init__(*args)

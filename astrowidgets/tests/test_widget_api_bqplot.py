@@ -161,12 +161,11 @@ class TestBQplotWidget(ImageAPITest):
         assert self.image.get_colormap() == 'Greys_r'
         assert self.image._astro_im._image.scales['image'].colors == greys_r
 
-    def test_load_image_keeps_current_display_settings(self):
-        # Loading a new image should display it with the cuts, stretch and
-        # colormap that are currently in effect, carried forward from the
-        # previously displayed image, and store them for the new image so
-        # that the get_* methods agree with the display. Only the viewport
-        # resets on load.
+    def test_load_image_new_label_gets_default_settings(self):
+        # Loading an image under a new label should display it with the
+        # widget's default cuts, stretch and colormap -- not settings
+        # carried forward from the previously displayed image -- and the
+        # previous label keeps its own settings untouched.
         rng = np.random.default_rng(seed=42)
         arr = rng.integers(1100, 1300, size=(50, 60)).astype(np.uint16)
         arr[25, 30] = 65535
@@ -180,46 +179,54 @@ class TestBQplotWidget(ImageAPITest):
 
         self.image.load_image(arr, image_label='second')
 
-        assert self.image.get_cuts(image_label='second') is cuts
-        assert self.image.get_stretch(image_label='second') is stretch
-        assert self.image.get_colormap(image_label='second') == 'viridis'
-        assert self.image._astro_im._image.scales['image'].colors == bqcolors('viridis')
+        second_cuts = self.image.get_cuts(image_label='second')
+        assert isinstance(second_cuts, apviz.AsymmetricPercentileInterval)
+        assert second_cuts.lower_percentile == 30
+        assert second_cuts.upper_percentile == 96
+        assert isinstance(self.image.get_stretch(image_label='second'),
+                          apviz.LinearStretch)
+        assert self.image.get_colormap(image_label='second') == 'Greys_r'
+        assert self.image._astro_im._image.scales['image'].colors == bqcolors('Greys_r')
 
         displayed = np.asarray(self.image._astro_im._image.image)
-        np.testing.assert_allclose(displayed, stretch(cuts(arr)))
+        np.testing.assert_allclose(displayed, second_cuts(arr))
 
-    def test_reload_existing_label_carries_displayed_settings(self):
-        # Loading data under an existing image label follows the same
-        # carry-forward rule as any other load: the settings of the image
-        # being replaced on the display -- not the reloaded label's old
-        # settings -- are carried to the new image and shown.
+        # The first label's settings are untouched.
+        assert self.image.get_cuts(image_label='first') is cuts
+        assert self.image.get_stretch(image_label='first') is stretch
+        assert self.image.get_colormap(image_label='first') == 'viridis'
+
+    def test_reload_existing_label_keeps_its_settings(self):
+        # Loading new data under an existing image label keeps the settings
+        # already stored for that label -- not the settings of the image it
+        # replaces on the display -- and redisplays with them.
         rng = np.random.default_rng(seed=42)
         arr = rng.integers(1100, 1300, size=(50, 60)).astype(np.uint16)
         arr[25, 30] = 65535
 
+        first_cuts = apviz.AsymmetricPercentileInterval(5, 90)
+        first_stretch = apviz.LogStretch()
         self.image.load_image(arr, image_label='first')
-        self.image.set_cuts(apviz.AsymmetricPercentileInterval(5, 90),
-                            image_label='first')
-        self.image.set_stretch(apviz.LogStretch(), image_label='first')
+        self.image.set_cuts(first_cuts, image_label='first')
+        self.image.set_stretch(first_stretch, image_label='first')
         self.image.set_colormap('viridis', image_label='first')
 
-        second_cuts = apviz.ManualInterval(1100, 1300)
-        second_stretch = apviz.SqrtStretch()
         self.image.load_image(arr, image_label='second')
-        self.image.set_cuts(second_cuts, image_label='second')
-        self.image.set_stretch(second_stretch, image_label='second')
+        self.image.set_cuts(apviz.ManualInterval(1100, 1300),
+                            image_label='second')
+        self.image.set_stretch(apviz.SqrtStretch(), image_label='second')
         self.image.set_colormap('plasma', image_label='second')
 
         new_arr = arr + 10
         self.image.load_image(new_arr, image_label='first')
 
-        assert self.image.get_cuts(image_label='first') is second_cuts
-        assert self.image.get_stretch(image_label='first') is second_stretch
-        assert self.image.get_colormap(image_label='first') == 'plasma'
-        assert self.image._astro_im._image.scales['image'].colors == bqcolors('plasma')
+        assert self.image.get_cuts(image_label='first') is first_cuts
+        assert self.image.get_stretch(image_label='first') is first_stretch
+        assert self.image.get_colormap(image_label='first') == 'viridis'
+        assert self.image._astro_im._image.scales['image'].colors == bqcolors('viridis')
 
         displayed = np.asarray(self.image._astro_im._image.image)
-        np.testing.assert_allclose(displayed, second_stretch(second_cuts(new_arr)))
+        np.testing.assert_allclose(displayed, first_stretch(first_cuts(new_arr)))
 
     def test_load_image_keeps_settings_without_labels(self):
         # The carry-forward of cuts, stretch and colormap must work in the
@@ -258,7 +265,7 @@ class TestBQplotWidget(ImageAPITest):
         # An unlabeled load gets a generated label, so it can never
         # silently replace a previously loaded image: the labeled image
         # keeps its data and settings, while the new image takes over the
-        # display with those settings carried forward.
+        # display with the widget's default settings.
         rng = np.random.default_rng(seed=42)
         arr = rng.integers(1100, 1300, size=(50, 60)).astype(np.uint16)
         arr[25, 30] = 65535
@@ -275,12 +282,16 @@ class TestBQplotWidget(ImageAPITest):
         assert self.image.get_cuts(image_label='labeled') is labeled_cuts
 
         # ...and the new image is displayed, under a generated label, with
-        # the displayed settings carried forward.
+        # the widget's default cuts rather than the labeled image's.
         new_label = self.image._displayed_image_labels[0]
         assert new_label != 'labeled'
         np.testing.assert_array_equal(
             np.asarray(self.image.get_image(image_label=new_label)), arr + 2)
-        assert self.image.get_cuts(image_label=new_label) is labeled_cuts
+        new_cuts = self.image.get_cuts(image_label=new_label)
+        assert new_cuts is not labeled_cuts
+        assert isinstance(new_cuts, apviz.AsymmetricPercentileInterval)
+        assert new_cuts.lower_percentile == 30
+        assert new_cuts.upper_percentile == 96
 
     def test_first_load_stores_widget_default_cuts(self):
         # With nothing loaded yet there are no current settings to carry
@@ -343,11 +354,6 @@ class TestBQplotWidget(ImageAPITest):
         # Loading should batch the updates so the image mark and each
         # scale send at most one state message.
         self.image.load_image(data, image_label='first')
-        # Cuts that differ from the widget default, so the end-state check
-        # below can tell the carried-forward settings from a fallback to
-        # the defaults.
-        cuts = apviz.AsymmetricPercentileInterval(5, 90)
-        self.image.set_cuts(cuts, image_label='first')
 
         astro_im = self.image._astro_im
         image_mark = astro_im._image
@@ -367,8 +373,10 @@ class TestBQplotWidget(ImageAPITest):
         assert spy_x.call_count <= 1
         assert spy_y.call_count <= 1
 
-        # Batching must not change the end state.
-        assert self.image.get_cuts(image_label='second') is cuts
+        # Batching must not change the end state: the new label is displayed
+        # with the widget's default cuts.
+        cuts = self.image.get_cuts(image_label='second')
+        assert isinstance(cuts, apviz.AsymmetricPercentileInterval)
         displayed = np.asarray(image_mark.image)
         np.testing.assert_allclose(displayed, cuts(arr))
         np.testing.assert_allclose(image_mark.x, [-0.5, arr.shape[1] - 0.5])
