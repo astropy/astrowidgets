@@ -23,7 +23,10 @@ from ginga.canvas.CanvasObject import drawCatalog
 from ginga.web.jupyterw.ImageViewJpw import EnhancedCanvasView
 from ginga.util.wcs import ra_deg_to_str, dec_deg_to_str
 
-from astro_image_display_api import ImageViewerLogic, docs_from_super_if_missing
+from astro_image_display_api.image_viewer_logic import (
+    ImageViewerLogic,
+    docs_from_image_viewer_logic_if_missing,
+)
 
 __all__ = ['ImageWidget']
 
@@ -160,7 +163,7 @@ def _ginga_dist_for_stretch(stretch, hashsize):
 
 
 # The inheritance order below matters -- VBox needs to come first
-@docs_from_super_if_missing
+@docs_from_image_viewer_logic_if_missing
 class ImageWidget(ipyw.VBox, ImageViewerLogic):
     """
     Image widget for Jupyter notebook using the Ginga viewer.
@@ -202,6 +205,13 @@ class ImageWidget(ipyw.VBox, ImageViewerLogic):
         ImageViewerLogic.__post_init__(self)
 
         self._viewer = EnhancedCanvasView(logger=logger)
+
+        # A field of view smaller than one data pixel is a legitimate request
+        # (e.g. an angular fov much finer than the image's pixel scale). By
+        # default ginga refuses the corresponding scale, which would leave the
+        # viewer silently out of sync with the viewport stored by the AIDA
+        # logic layer.
+        self._viewer.settings.set(sanity_check_scale=False)
 
         self._jup_img = ipyw.Image(format='jpeg')
 
