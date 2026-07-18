@@ -16,7 +16,7 @@ classifiers = [
 ]
 dependencies = [
     "astropy",
-    "astro-image-display-api>=0.2.1",
+    "astro-image-display-api>=0.3.0",
     "ginga>=3.4",
     "pillow",
     "ipywidgets>=8",
