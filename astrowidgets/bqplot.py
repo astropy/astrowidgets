@@ -555,10 +555,6 @@ class ImageWidget(ipw.VBox, ImageViewerLogic):
         finally:
             self._refresh_deferred = False
 
-    @property
-    def viewer(self):
-        return self._astro_im
-
     # ------------------------------------------------------------------
     # Rendering hooks
     #
