@@ -1,4 +1,4 @@
-from contextlib import contextmanager
+from contextlib import ExitStack, contextmanager
 from pathlib import Path
 
 import numpy as np
@@ -15,34 +15,10 @@ import ipywidgets as ipw
 from matplotlib import pyplot
 from matplotlib.colors import to_hex
 
-from astro_image_display_api.image_viewer_logic import ImageViewerLogic
-
-
-def docs_from_super_if_missing(cls):
-    """
-    Decorator to copy the docstrings from the interface methods to the
-    methods in the class.
-    """
-    for name, method in cls.__dict__.items():
-        if not name.startswith("_"):
-            if method.__doc__:
-                continue
-            # Not sure why this fails, but it does.
-            # method.__doc__ = inspect.getdoc(method)
-            interface_method = getattr(ImageViewerLogic, name, None)
-
-            if interface_method:
-                method.__doc__ = interface_method.__doc__
-            # print(f"{method} {method.__doc__} {inspect.getdoc(method)} {interface_method.__doc__=}")
-            # supers = cls.__mro__
-            # for a_super in supers:
-            #     print(f"{name=} {a_super=}")
-            #     interface_method = getattr(a_super, name, None)
-            #     if interface_method:
-            #         print(f"{name=} {a_super=}")
-            #         method.__doc__ = interface_method.__doc__
-            #         break
-    return cls
+from astro_image_display_api.image_viewer_logic import (
+    ImageViewerLogic,
+    docs_from_image_viewer_logic_if_missing,
+)
 
 
 class _AstroImage(ipw.VBox):
@@ -377,13 +353,13 @@ def bqcolors(colormap, reverse=False):
 
 
 # The inheritance order below matters -- VBox needs to come first
-@docs_from_super_if_missing
+@docs_from_image_viewer_logic_if_missing
 class ImageWidget(ipw.VBox, ImageViewerLogic):
     def __init__(self, *args, display_width=500, display_aspect_ratio=1):
         super().__init__(*args)
-        self._set_up_catalog_image_dicts()
-        # self.image_width = image_width
-        # self.image_height = image_height
+        # ImageViewerLogic is a dataclass; we do not run its __init__, so run
+        # the post-init hook it would otherwise provide to set up its state.
+        ImageViewerLogic.__post_init__(self)
 
         self._astro_im = _AstroImage(display_width=display_width,
                                      viewer_aspect_ratio=display_aspect_ratio)
@@ -392,10 +368,12 @@ class ImageWidget(ipw.VBox, ImageViewerLogic):
         self._default_cuts = apviz.AsymmetricPercentileInterval(30, 96)
         self._default_stretch = None
         self._default_colormap = 'Greys_r'
-        # Store the default through the API layer (which keeps settings
-        # for the None label even before a load) so that get_colormap
-        # reports it; set_colormap also applies it to the front end.
-        self.set_colormap(self._default_colormap)
+        # The API layer stores settings per image, so nothing can be stored
+        # before a load; apply the default colormap directly to the front
+        # end so the empty viewer already shows it. When the first image is
+        # loaded, _render_image stores the widget defaults for it so that
+        # the get_* methods report what is displayed.
+        self._astro_im.set_color(bqcolors(self._default_colormap))
 
         self._data = None
         self._wcs = None
@@ -491,13 +469,17 @@ class ImageWidget(ipw.VBox, ImageViewerLogic):
             Watch for changes in the viewport (pan or zoom) from the viewer.
             """
             new_width = self._astro_im.get_current_width()
-            if new_width is None or self._updating_viewport:
+            if (new_width is None or self._updating_viewport
+                    or not self._displayed_image_labels):
                 # There is no image yet, or this object is in the process
                 # of changing the viewport, so return
                 return
 
+            # A pan or zoom in the GUI is always a change to the view of
+            # the displayed image.
+            image_label = self._displayed_image_labels[0]
             current = self.get_viewport(sky_or_pixel='pixel',
-                                        image_label=self._current_image_label)
+                                        image_label=image_label)
             old_width = current["fov"]
             old_center = current["center"]
             new_center = self._astro_im.center
@@ -514,7 +496,8 @@ class ImageWidget(ipw.VBox, ImageViewerLogic):
                 # Let the viewport handler know the GUI itself generated this
                 # change, which means the GUI does not need to be updated.
                 self._viewport_change_source_is_gui = True
-                self.set_viewport(center=new_center, fov=new_width)
+                self.set_viewport(center=new_center, fov=new_width,
+                                  image_label=image_label)
 
         # Observe changes to the maximum of both the x and y scales so that
         # horizontal pan, vertical pan, and zoom are all detected. Observing
@@ -546,17 +529,18 @@ class ImageWidget(ipw.VBox, ImageViewerLogic):
             self._astro_im.set_data(self._interval_and_stretch(stretch=stretch, cuts=cuts),
                                     reset_view=reset_view)
 
-    def _refresh_display(self, image_label=None, reset_view=False):
+    def _refresh_display(self, image_label=None):
         """
         Recompute the displayed array from the cuts and stretch stored
-        for the image and send it to the viewer.
+        for the image and send it to the viewer. The viewport (zoom/pan)
+        is left untouched; it is owned by the ``_apply_viewport`` hook.
         """
         if self._data is None or self._refresh_deferred:
             return
 
         self._send_data(cuts=self.get_cuts(image_label=image_label),
                         stretch=self.get_stretch(image_label=image_label),
-                        reset_view=reset_view)
+                        reset_view=False)
 
     @contextmanager
     def _defer_refresh(self):
@@ -571,79 +555,208 @@ class ImageWidget(ipw.VBox, ImageViewerLogic):
         finally:
             self._refresh_deferred = False
 
-    @property
-    def _current_image_label(self):
+    # ------------------------------------------------------------------
+    # Rendering hooks
+    #
+    # The public API methods inherited from ImageViewerLogic are templates
+    # that own all state handling and label resolution, then call these
+    # hooks with already-resolved labels to push the stored state into the
+    # bqplot figure. The _apply_* hooks are only called for the displayed
+    # image.
+    # ------------------------------------------------------------------
+    @contextmanager
+    def _batch_update(self):
         """
-        Image label for the most recently loaded image
-        """
-        return list(self._images.keys())[-1]
+        Batch the front-end updates of a group of state changes.
 
-    def set_stretch(self, value, image_label=None, **kwargs):
-        super().set_stretch(value, image_label=image_label, **kwargs)
-        # Changing the stretch only affects the color mapping, so leave the
-        # current viewport (zoom/pan) untouched.
+        Overrides the no-op hook from
+        `~astro_image_display_api.ImageViewerLogic`; ``load_image`` wraps
+        its state changes and rendering-hook calls in this context.
+
+        The composition is: hold the front-end sync of the image mark and
+        the scales for the whole block (so each widget sends one state
+        message, with the image mark flushing first -- see
+        ``_AstroImage._hold_all_sync``), and defer the display refreshes
+        that the ``_apply_*`` hooks trigger, collapsing them into a single
+        recomputation of the displayed array that runs while the front-end
+        sync is still held.
+        """
+        with ExitStack() as stack:
+            # Entered first, so it releases last: everything below happens
+            # while the front-end sync is held.
+            stack.enter_context(self._astro_im._hold_all_sync())
+            # Runs on exit, after _defer_refresh has released: the one
+            # refresh that replaces the refreshes deferred in the block.
+            stack.callback(self._refresh_after_batch)
+            stack.enter_context(self._defer_refresh())
+            yield
+
+    def _refresh_after_batch(self):
+        """
+        Recompute and send the displayed array once after a batched update.
+
+        The viewport is not touched here: the ``_apply_viewport`` hook has
+        already pushed the stored viewport into the scales during the batch.
+        """
+        for image_label in self._displayed_image_labels:
+            self._refresh_display(image_label=image_label)
+
+    def _render_image(self, image_label):
+        """
+        Make the image stored under a label the one the widget displays.
+
+        Overrides the no-op rendering hook from
+        `~astro_image_display_api.ImageViewerLogic`. ``load_image`` calls it
+        after storing the image data and settings; the ``_apply_*`` hooks
+        are called afterwards to push the stored settings into the display.
+
+        Parameters
+        ----------
+        image_label : str
+            Resolved label of the image to display.
+        """
+        info = self._images[image_label]
+
+        if info.colormap is None:
+            # load_image carries the displayed image's cuts, stretch and
+            # colormap forward to the new image, and any image that has been
+            # displayed has a colormap (this very block guarantees it), so a
+            # missing colormap means nothing was carried forward: this image
+            # is the first to be displayed. Store the widget's defaults for
+            # it so that the get_* methods report what is displayed.
+            info.colormap = self._default_colormap
+            info.cuts = self._default_cuts
+            if self._default_stretch is not None:
+                info.stretch = self._default_stretch
+
+        data = info.data
+        self._data = data.data if isinstance(data, NDData) else data
+        self._wcs = info.wcs
+
+    def _apply_cuts(self, image_label):
+        """
+        Re-display the image using the cut levels stored for a label.
+
+        Overrides the no-op rendering hook from
+        `~astro_image_display_api.ImageViewerLogic`; only called when the
+        label is displayed. Changing the cuts only affects the color
+        mapping, so the current viewport (zoom/pan) is left untouched.
+
+        Parameters
+        ----------
+        image_label : str
+            Resolved label whose stored cuts to apply.
+        """
         self._refresh_display(image_label=image_label)
 
-    def set_cuts(self, value, image_label=None, **kwargs):
-        super().set_cuts(value, image_label=image_label, **kwargs)
-        # Changing the cuts only affects the color mapping, so leave the
-        # current viewport (zoom/pan) untouched.
+    def _apply_stretch(self, image_label):
+        """
+        Re-display the image using the stretch stored for a label.
+
+        Overrides the no-op rendering hook from
+        `~astro_image_display_api.ImageViewerLogic`; only called when the
+        label is displayed. Changing the stretch only affects the color
+        mapping, so the current viewport (zoom/pan) is left untouched.
+
+        Parameters
+        ----------
+        image_label : str
+            Resolved label whose stored stretch to apply.
+        """
         self._refresh_display(image_label=image_label)
 
-    @property
-    def viewer(self):
-        return self._astro_im
+    def _apply_colormap(self, image_label):
+        """
+        Push the colormap stored for a label into the bqplot color scale.
 
-    # The methods, grouped loosely by purpose
-    def load_image(self, image, image_label=None, **kwargs):
-        # A newly loaded image is always displayed with the current cuts,
-        # stretch and colormap; only the viewport resets. Capture the
-        # current settings before the API layer replaces them with its own
-        # defaults during the load.
-        if image_label is not None and image_label in self._images:
-            # Re-loading an existing image: its own settings are current.
-            settings_label = image_label
-            have_current = True
-        elif self._data is not None:
-            # A new image: carry forward from the displayed image. Its label
-            # is legitimately None when the caller never passed one, so guard
-            # on whether an image is displayed, not on the label's value.
-            settings_label = self._current_image_label
-            have_current = True
-        else:
-            # Nothing has been displayed yet.
-            have_current = False
+        Overrides the no-op rendering hook from
+        `~astro_image_display_api.ImageViewerLogic`; only called when the
+        label is displayed.
 
-        if have_current:
-            current_cuts = self.get_cuts(image_label=settings_label)
-            current_stretch = self.get_stretch(image_label=settings_label)
-            current_colormap = self.get_colormap(image_label=settings_label)
-        else:
-            current_cuts = self._default_cuts
-            # Leave the stretch the API layer stores on load (linear).
-            current_stretch = self._default_stretch
-            current_colormap = self._default_colormap
+        Parameters
+        ----------
+        image_label : str
+            Resolved label whose stored colormap to apply.
+        """
+        self._astro_im.set_color(
+            bqcolors(self.get_colormap(image_label=image_label)))
 
-        # Hold the sync so the scale changes from the viewport
-        # initialization in the API layer arrive at the front end in the
-        # same batch as the new image data, avoiding flicker from
-        # intermediate redraws.
-        with self._astro_im._hold_all_sync():
-            # Store the settings for the new image so the get_* methods
-            # report what is displayed. Defer the refresh each setter
-            # triggers; one refresh at the end displays the image.
-            with self._defer_refresh():
-                super().load_image(image, image_label=image_label, **kwargs)
+    def _apply_viewport(self, image_label):
+        """
+        Push the viewport stored for a label into the bqplot scales.
 
-                self.set_cuts(current_cuts, image_label=image_label)
-                if current_stretch is not None:
-                    self.set_stretch(current_stretch, image_label=image_label)
-                self.set_colormap(current_colormap, image_label=image_label)
+        Overrides the no-op rendering hook from
+        `~astro_image_display_api.ImageViewerLogic`; only called when the
+        label is displayed.
 
-                data = self.get_image(image_label=image_label)
-                self._data = data.data if isinstance(data, NDData) else data
+        Parameters
+        ----------
+        image_label : str
+            Resolved label whose stored viewport (center and field of view)
+            to apply.
+        """
+        if self._viewport_change_source_is_gui:
+            # The GUI itself (a pan or zoom in the browser) generated this
+            # viewport change, so the front end is already up to date.
+            self._viewport_change_source_is_gui = False
+            return
 
-            self._refresh_display(image_label=image_label, reset_view=True)
+        # Get the viewport in pixel coordinates; the API layer handles all
+        # of the WCS stuff in the event the stored fov is in sky units.
+        viewport = self.get_viewport(image_label=image_label,
+                                     sky_or_pixel='pixel')
+
+        # Suppress the handling of the scale changes made below as if they
+        # were a pan or zoom from the GUI.
+        self._updating_viewport = True
+        try:
+            self._astro_im.center = viewport['center']
+            self._astro_im.set_size(viewport['fov'], direction='x')
+        finally:
+            self._updating_viewport = False
+
+    def _draw_catalog(self, catalog_label):
+        """
+        Draw (or redraw) a catalog's markers as a bqplot scatter mark.
+
+        Overrides the no-op rendering hook from
+        `~astro_image_display_api.ImageViewerLogic`; called by
+        ``load_catalog`` and ``set_catalog_style``.
+
+        Parameters
+        ----------
+        catalog_label : str
+            Resolved label of the catalog to draw. Its markers are drawn
+            under a mark id equal to the label, replacing any previous
+            scatter mark for that catalog.
+        """
+        catalog = self.get_catalog(catalog_label=catalog_label)
+        style = self.get_catalog_style(catalog_label=catalog_label)
+
+        self._astro_im.plot_named_markers(
+            catalog["x"],
+            catalog["y"],
+            catalog_label,
+            color=style.get("color", "red"),
+            # bqplot expects the size in pixels squared
+            size=style.get("size", 5)**2,
+            shape=style.get("shape", "circle"),
+        )
+
+    def _remove_catalog_marks(self, catalog_label):
+        """
+        Remove a catalog's scatter mark from the bqplot figure.
+
+        Overrides the no-op rendering hook from
+        `~astro_image_display_api.ImageViewerLogic`; ``remove_catalog``
+        calls it once per removed catalog (after expanding ``"*"``).
+
+        Parameters
+        ----------
+        catalog_label : str
+            Resolved label of the catalog whose markers to remove.
+        """
+        self._astro_im.remove_named_markers(catalog_label)
 
     # Saving contents of the view and accessing the view
     def save(self, filename, overwrite=False, **kwargs):
@@ -659,83 +772,6 @@ class ImageWidget(ipw.VBox, ImageViewerLogic):
         else:
             raise ValueError('Saving is not supported for that'
                              'file type. Use .png or .svg')
-
-    def set_colormap(self, cmap_name, image_label=None, **kwargs):
-        super().set_colormap(cmap_name, image_label=image_label, **kwargs)
-        self._astro_im.set_color(bqcolors(cmap_name, reverse=False))
-
-    def load_catalog(
-        self,
-        table,
-        **kwargs
-    ):
-        super().load_catalog(table, **kwargs)
-        catalog_label = kwargs.get("catalog_label", None)
-        self.set_catalog_style(
-            **self.get_catalog_style(catalog_label=catalog_label)
-        )
-
-    def set_catalog_style(
-            self,
-            catalog_label=None,
-            shape="circle",
-            color="red",
-            size=5,
-            **kwargs
-    ):
-        super().set_catalog_style(
-            catalog_label=catalog_label,
-            shape=shape,
-            color=color,
-            size=size,
-            **kwargs
-        )
-        this_catalog = self.get_catalog(catalog_label=catalog_label)
-
-        self._astro_im.plot_named_markers(
-            this_catalog["x"],
-            this_catalog["y"],
-            str(catalog_label),
-            color=color,
-            size=size**2,  # bqplot expects size in pixels squared
-            shape=shape,
-        )
-
-    def remove_catalog(self, catalog_label=None, **kwargs):
-        super().remove_catalog(catalog_label, **kwargs)
-        if catalog_label == "*":
-            # Remove all catalogs
-            self._astro_im.remove_markers()
-        else:
-            self._astro_im.remove_named_markers(str(catalog_label))
-
-    def set_viewport(self, center=None, fov=None, image_label=None, **kwargs):
-        # This will handle all of the WCS stuff, which we need in the event
-        # the fov is in sky coordinates.
-        super().set_viewport(center=center, fov=fov, image_label=image_label, **kwargs)
-
-        # Get the viewport in pixel coordinates
-        viewport = self.get_viewport(image_label=image_label, sky_or_pixel='pixel')
-        if not self._viewport_change_source_is_gui:
-            # This is used in the viewport handler to suppress
-            # handling during a programmatic change to the
-            # viewport.
-            self._updating_viewport = True
-            # Set the center of the image to the center of the viewport
-            # Note the coordinates are reversed because that is how it goes
-            # with image display vs array indices.
-            self._astro_im.center = viewport['center']
-
-            # Set the size of the image to the size of the viewport
-            self._astro_im.set_size(viewport['fov'], direction='x')
-            self._updating_viewport = False
-        else:
-            # The GUI is the source of the change, so do not update the
-            # image center or size.
-            self._viewport_change_source_is_gui = False
-
-    def get_viewport(self, sky_or_pixel=None, image_label=None, **kwargs):
-        return super().get_viewport(sky_or_pixel, image_label, **kwargs)
 
     @property
     def print_out(self):
