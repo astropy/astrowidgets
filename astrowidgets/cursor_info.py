@@ -63,6 +63,9 @@ def format_cursor_text(x, y, data=None, wcs=None, sky_format='degrees'):
         raise ValueError(f'Invalid value {sky_format!r} for sky_format. '
                          f'Valid values are: {ALLOWED_SKY_COORDINATE_FORMATS}')
 
+    if data is not None:
+        data = np.asarray(data)
+
     # floor rather than int() so that positions just outside the image on
     # the negative side do not alias onto pixel 0.
     x_index = int(np.floor(x + 0.5))
@@ -93,6 +96,11 @@ def format_cursor_text(x, y, data=None, wcs=None, sky_format='degrees'):
                 dec = f'{sky.dec.deg:<+8.4f}'
             segments.append(f'RA: {ra} Dec: {dec} (ICRS)')
         except Exception:
+            # Deliberately broad: the WCS is user-supplied and only
+            # duck-typed to the APE-14 interface, so the exceptions it can
+            # raise are open-ended, and this runs on every mouse move,
+            # where an escaped exception would spam the log or vanish
+            # instead of surfacing cleanly. Degrade to a visible error.
             segments.append('RA/Dec: WCS error')
 
     segments.append(value)
@@ -107,21 +115,24 @@ class CursorInfoMixin:
     `~astro_image_display_api.image_viewer_logic.ImageViewerLogic`, whose
     per-label image storage supplies the data and WCS for the readout.
     The mixin defines no ``__init__``; backends call `_init_cursor_info`
-    from their own ``__init__`` and forward their native mouse-move
-    events to `_update_cursor_text`.
+    from their own ``__init__``, place the returned readout widget in
+    their own ``children``, and forward their native mouse-move events
+    to `_update_cursor_text`.
     """
     ALLOWED_CURSOR_LOCATIONS = ALLOWED_CURSOR_LOCATIONS
     ALLOWED_SKY_COORDINATE_FORMATS = ALLOWED_SKY_COORDINATE_FORMATS
 
-    def _init_cursor_info(self, image_widget):
+    def _init_cursor_info(self):
         """
-        Create the readout widget and lay it out below ``image_widget``.
+        Create and return the readout widget. The backend adds it to its
+        own ``children``, below the image widget; the `cursor` property
+        flips the box to ``column-reverse`` to show it on top.
         """
         self._cursor_readout = ipw.HTML('Coordinates show up here')
         self._sky_coordinate_format = 'degrees'
         self._last_cursor_position = None
-        self.children = [image_widget, self._cursor_readout]
         self.cursor = 'bottom'
+        return self._cursor_readout
 
     @property
     def cursor(self):
@@ -133,6 +144,18 @@ class CursorInfoMixin:
 
     @cursor.setter
     def cursor(self, val):
+        """
+        Set the readout location.
+
+        Parameters
+        ----------
+        val : str or None
+            One of `ALLOWED_CURSOR_LOCATIONS`: ``'top'`` or ``'bottom'``
+            place the readout above or below the image by flipping the
+            box's flex direction; ``None`` hides it. The readout is
+            re-rendered at the last cursor position. Anything else
+            raises `ValueError`.
+        """
         if val is None:
             self._cursor_readout.layout.visibility = 'hidden'
             self._cursor_readout.layout.display = 'none'
@@ -159,6 +182,18 @@ class CursorInfoMixin:
 
     @sky_coordinate_format.setter
     def sky_coordinate_format(self, val):
+        """
+        Set the RA/Dec display format.
+
+        Parameters
+        ----------
+        val : str
+            One of `ALLOWED_SKY_COORDINATE_FORMATS`: ``'degrees'`` or
+            ``'sexagesimal'``. The readout is immediately re-rendered
+            at the last cursor position, so the change is visible
+            without waiting for the next mouse move. Anything else
+            raises `ValueError`.
+        """
         if val not in self.ALLOWED_SKY_COORDINATE_FORMATS:
             raise ValueError('Invalid value {} for sky_coordinate_format. '
                              'Valid values are: '
@@ -171,6 +206,13 @@ class CursorInfoMixin:
         """
         Update the readout for a cursor at ``(x, y)`` in data coordinates,
         using the data and WCS of the currently displayed image.
+
+        Parameters
+        ----------
+        x, y : float
+            Cursor position in data (pixel) coordinates, following the
+            `astropy.wcs.WCS.pixel_to_world` convention (pixel centers
+            at integer values, origin 0).
         """
         self._last_cursor_position = (x, y)
         self._refresh_cursor_text()
@@ -189,8 +231,6 @@ class CursorInfoMixin:
         data = info.data
         if isinstance(data, NDData):
             data = data.data
-        elif data is not None:
-            data = np.asarray(data)
 
         self._cursor_readout.value = READOUT_TEMPLATE.format(
             format_cursor_text(x, y, data=data, wcs=info.wcs,

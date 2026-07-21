@@ -269,7 +269,7 @@ class ImageWidget(ipyw.VBox, CursorInfoMixin, ImageViewerLogic):
         # Output widget that captures printed output, for debugging.
         self._print_out = ipyw.Output()
 
-        self._init_cursor_info(self._jup_img)
+        self.children = [self._jup_img, self._init_cursor_info()]
 
     # ------------------------------------------------------------------
     # Read-only conveniences

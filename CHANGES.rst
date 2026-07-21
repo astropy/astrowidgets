@@ -8,14 +8,12 @@ New Features
 
 - The cursor-information readout (X/Y, RA/Dec, pixel value) is now shared
   between the ginga and bqplot backends via
-  ``astrowidgets.cursor_info.CursorInfoMixin``. The ``cursor`` property
-  ('top', 'bottom', or ``None``), which had been dropped from the bqplot
-  backend, is available again on both backends, and a new
-  ``sky_coordinate_format`` property selects between decimal degrees (the
-  new default for both backends) and sexagesimal for the RA/Dec display.
-  As part of this change the ginga readout switched from sexagesimal to
-  decimal degrees by default; set ``sky_coordinate_format`` to
-  ``'sexagesimal'`` for the previous behavior.
+  ``astrowidgets.cursor_info.CursorInfoMixin``. Both backends have a
+  ``cursor`` property (``'top'``, ``'bottom'``, or ``None``) and a new
+  ``sky_coordinate_format`` property that selects decimal degrees (the
+  default) or sexagesimal for the RA/Dec display. The ginga readout now
+  defaults to decimal degrees; set ``sky_coordinate_format`` to
+  ``'sexagesimal'`` for the previous display. [#222]
 
 Bug Fixes
 ---------

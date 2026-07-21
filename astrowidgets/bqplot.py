@@ -396,7 +396,7 @@ class ImageWidget(ipw.VBox, CursorInfoMixin, ImageViewerLogic):
 
         self._init_mouse_callbacks()
         self._init_watch_image_changes()
-        self._init_cursor_info(self._astro_im)
+        self.children = [self._astro_im, self._init_cursor_info()]
 
     def _init_mouse_callbacks(self):
 
