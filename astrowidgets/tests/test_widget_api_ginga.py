@@ -11,21 +11,10 @@ from astropy.visualization import (AsinhStretch, ContrastBiasStretch,
                                    LinearStretch, LogStretch, PowerDistStretch,
                                    PowerStretch, SinhStretch, SqrtStretch,
                                    SquaredStretch)
-from astropy.wcs import WCS
 from traitlets import TraitError
 
 from astro_image_display_api.api_test import ImageAPITest
 from astro_image_display_api import ImageViewerInterface
-
-
-def _make_wcs():
-    w = WCS(naxis=2)
-    w.wcs.crpix = [-234.75, 8.3393]
-    w.wcs.cdelt = np.array([-0.066667, 0.066667])
-    w.wcs.crval = [0, -90]
-    w.wcs.ctype = ["RA---AIR", "DEC--AIR"]
-    w.wcs.set_pv([(2, 1, 45.0)])
-    return w
 
 
 _ = pytest.importorskip("ginga",
@@ -204,9 +193,8 @@ def test_center_on_pixel_updates_viewport():
     assert center[1] == pytest.approx(40)
 
 
-def test_center_on_skycoord_updates_viewport():
+def test_center_on_skycoord_updates_viewport(wcs):
     # _center_on with a SkyCoord should re-center the stored viewport.
-    wcs = _make_wcs()
     image = ImageWidget()
     image.load_image(NDData(data=np.zeros((100, 150)), wcs=wcs))
     target = SkyCoord(*wcs.wcs.crval, unit='deg')
