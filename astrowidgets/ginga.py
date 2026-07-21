@@ -21,12 +21,13 @@ from ginga import cmap as ginga_cmap
 from ginga.AstroImage import AstroImage
 from ginga.canvas.CanvasObject import drawCatalog
 from ginga.web.jupyterw.ImageViewJpw import EnhancedCanvasView
-from ginga.util.wcs import ra_deg_to_str, dec_deg_to_str
 
 from astro_image_display_api.image_viewer_logic import (
     ImageViewerLogic,
     docs_from_image_viewer_logic_if_missing,
 )
+
+from astrowidgets.cursor_info import CursorInfoMixin
 
 __all__ = ['ImageWidget']
 
@@ -164,7 +165,7 @@ def _ginga_dist_for_stretch(stretch, hashsize):
 
 # The inheritance order below matters -- VBox needs to come first
 @docs_from_image_viewer_logic_if_missing
-class ImageWidget(ipyw.VBox, ImageViewerLogic):
+class ImageWidget(ipyw.VBox, CursorInfoMixin, ImageViewerLogic):
     """
     Image widget for Jupyter notebook using the Ginga viewer.
 
@@ -185,9 +186,6 @@ class ImageWidget(ipyw.VBox, ImageViewerLogic):
     image_width, image_height : int
         Dimension of the Jupyter notebook's image widget, in pixels.
     """
-    # Allowed locations for cursor display
-    ALLOWED_CURSOR_LOCATIONS = ['top', 'bottom', None]
-
     # List of marker names that are for internal use only
     RESERVED_MARKER_SET_NAMES = ['all']
 
@@ -265,15 +263,13 @@ class ImageWidget(ipyw.VBox, ImageViewerLogic):
         self._updating_viewport = False
 
         # coordinates display
-        self._jup_coord = ipyw.HTML('Coordinates show up here')
         self._viewer.add_callback('cursor-changed', self._mouse_move_cb)
         self._viewer.add_callback('cursor-down', self._mouse_click_cb)
 
         # Output widget that captures printed output, for debugging.
         self._print_out = ipyw.Output()
 
-        self._cursor = 'bottom'
-        self.children = [self._jup_img, self._jup_coord]
+        self._init_cursor_info(self._jup_img)
 
     # ------------------------------------------------------------------
     # Read-only conveniences
@@ -324,30 +320,7 @@ class ImageWidget(ipyw.VBox, ImageViewerLogic):
         data_x, data_y : float
             Cursor position, in data (pixel) coordinates.
         """
-        if self.cursor is None:  # no-op
-            return
-
-        image = viewer.get_image()
-        if image is not None:
-            ix = int(data_x + 0.5)
-            iy = int(data_y + 0.5)
-            try:
-                imval = viewer.get_data(ix, iy)
-                imval = '{:8.3f}'.format(imval)
-            except Exception:
-                imval = 'N/A'
-
-            val = 'X: {:.2f}, Y: {:.2f}'.format(data_x, data_y)
-            if image.wcs.wcs is not None:
-                try:
-                    ra, dec = image.pixtoradec(data_x, data_y)
-                    val += ' (RA: {}, DEC: {})'.format(
-                        ra_deg_to_str(ra), dec_deg_to_str(dec))
-                except Exception:
-                    val += ' (RA, DEC: WCS error)'
-
-            val += ', value: {}'.format(imval)
-            self._jup_coord.value = val
+        self._update_cursor_text(data_x, data_y)
 
     def _mouse_click_cb(self, viewer, event, data_x, data_y):
         """
@@ -735,31 +708,6 @@ class ImageWidget(ipyw.VBox, ImageViewerLogic):
             ``(X, Y)`` coordinates.
         """
         self.set_viewport(center=point)
-
-    @property
-    def cursor(self):
-        """
-        Show or hide cursor information (X, Y, WCS).
-        Acceptable values are 'top', 'bottom', or ``None``.
-        """
-        return self._cursor
-
-    @cursor.setter
-    def cursor(self, val):
-        if val is None:
-            self._jup_coord.layout.visibility = 'hidden'
-            self._jup_coord.layout.display = 'none'
-        elif val == 'top' or val == 'bottom':
-            self._jup_coord.layout.visibility = 'visible'
-            self._jup_coord.layout.display = 'flex'
-            if val == 'top':
-                self.layout.flex_flow = 'column-reverse'
-            else:
-                self.layout.flex_flow = 'column'
-        else:
-            raise ValueError('Invalid value {} for cursor. Valid values are: '
-                             '{}'.format(val, self.ALLOWED_CURSOR_LOCATIONS))
-        self._cursor = val
 
     @property
     def click_center(self):
