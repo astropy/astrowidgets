@@ -758,7 +758,7 @@ class ImageWidget(ipyw.VBox, CursorInfoMixin, ImageViewerLogic):
     @click_center.setter
     def click_center(self, val):
         if not isinstance(val, bool):
-            raise ValueError("Must be True or False")
+            raise TypeError("Must be True or False")
         elif self.is_marking and val:
             raise ValueError("Cannot set to True while marking is active")
 
@@ -778,7 +778,7 @@ class ImageWidget(ipyw.VBox, CursorInfoMixin, ImageViewerLogic):
     @click_drag.setter
     def click_drag(self, value):
         if not isinstance(value, bool):
-            raise ValueError("click_drag must be either True or False")
+            raise TypeError("click_drag must be either True or False")
         if self.is_marking:
             raise ValueError(
                 "Interactive marking is in progress. Call "
@@ -805,7 +805,7 @@ class ImageWidget(ipyw.VBox, CursorInfoMixin, ImageViewerLogic):
     @scroll_pan.setter
     def scroll_pan(self, value):
         if not isinstance(value, bool):
-            raise ValueError("scroll_pan must be either True or False")
+            raise TypeError("scroll_pan must be either True or False")
 
         bindmap = self._viewer.get_bindmap()
         self._scroll_pan = value
