@@ -20,6 +20,8 @@ from astro_image_display_api.image_viewer_logic import (
     docs_from_image_viewer_logic_if_missing,
 )
 
+from astrowidgets.cursor_info import CursorInfoMixin
+
 
 class _AstroImage(ipw.VBox):
     """
@@ -354,7 +356,7 @@ def bqcolors(colormap, reverse=False):
 
 # The inheritance order below matters -- VBox needs to come first
 @docs_from_image_viewer_logic_if_missing
-class ImageWidget(ipw.VBox, ImageViewerLogic):
+class ImageWidget(ipw.VBox, CursorInfoMixin, ImageViewerLogic):
     def __init__(self, *args, display_width=500, display_aspect_ratio=1):
         super().__init__(*args)
         # ImageViewerLogic is a dataclass; we do not run its __init__, so run
@@ -392,11 +394,9 @@ class ImageWidget(ipw.VBox, ImageViewerLogic):
         # debugging.
         self._print_out = ipw.Output()
 
-        self._cursor = ipw.HTML('Coordinates show up here')
-
         self._init_mouse_callbacks()
         self._init_watch_image_changes()
-        self.children = [self._astro_im, self._cursor]
+        self.children = [self._astro_im, self._init_cursor_info()]
 
     def _init_mouse_callbacks(self):
 
@@ -415,36 +415,8 @@ class ImageWidget(ipw.VBox, ImageViewerLogic):
         self._astro_im.interaction.on_msg(on_mouse_message)
 
     def _mouse_move(self, event_data):
-        if self._data is None:
-            # Nothing to display, so exit
-            return
-
-        xc = event_data['domain']['x']
-        yc = event_data['domain']['y']
-
-        # get the array indices into the data so that we can get data values
-        x_index = int(np.floor(xc + 0.5))
-        y_index = int(np.floor(yc + 0.5))
-
-        # Check that the index is in the array.
-        in_image = (self._data.shape[1] > x_index >= 0) and (self._data.shape[0] > y_index >= 0)
-        if in_image:
-            val = self._data[y_index, x_index]
-        else:
-            val = None
-
-        if val is not None:
-            value = f'value: {val:8.3f}'
-        else:
-            value = 'value: N/A'
-
-        pixel_location = f'X:  {xc:.2f}  Y:  {yc:.2f}'
-        if self._wcs is not None:
-            sky = self._wcs.pixel_to_world(yc, xc)
-            ra_dec = f'RA: {sky.icrs.ra:3.7f} Dec: {sky.icrs.dec:3.7f}'
-        else:
-            ra_dec = ''
-        self._cursor.value = ', '.join([pixel_location, ra_dec, value])
+        self._update_cursor_text(event_data['domain']['x'],
+                                 event_data['domain']['y'])
 
     def _mouse_click(self, event_data):
         if self._data is None:
