@@ -517,7 +517,7 @@ class ImageWidget(ipyw.VBox, CursorInfoMixin, ImageViewerLogic):
         """
         try:
             self._viewer.canvas.delete_object_by_tag(str(catalog_label))
-        except Exception:
+        except Exception:  # noqa: S110, BLE001
             # Nothing was drawn under this tag; that is fine.
             pass
 
@@ -584,7 +584,7 @@ class ImageWidget(ipyw.VBox, CursorInfoMixin, ImageViewerLogic):
         # Remove any existing drawing for this catalog before redrawing.
         try:
             self._viewer.canvas.delete_object_by_tag(tag)
-        except Exception:
+        except Exception:  # noqa: S110, BLE001
             pass
 
         catalog = self.get_catalog(catalog_label=catalog_label)

@@ -108,7 +108,7 @@ def format_cursor_text(x, y, data=None, wcs=None, sky_format="degrees"):
                 ra = f"{sky.ra.deg:<8.4f}"
                 dec = f"{sky.dec.deg:<+8.4f}"
             segments.append(f"RA: {ra} Dec: {dec} (ICRS)")
-        except Exception:
+        except Exception:  # noqa: BLE001
             # Deliberately broad: the WCS is user-supplied and only
             # duck-typed to the APE-14 interface, so the exceptions it can
             # raise are open-ended, and this runs on every mouse move,
