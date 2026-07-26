@@ -75,7 +75,7 @@ rst_epilog += """
 project = project_metadata.get("name", "astrowidgets")
 author = ", ".join(a["name"] for a in project_metadata.get("authors", []))
 # release = project_metadata.get("version", "")
-copyright = f"{datetime.datetime.now().year}, {author}"
+copyright = f"{datetime.datetime.now(tz=datetime.UTC).year}, {author}"
 repo_url = project_metadata.get("urls", {}).get("Repository", "")
 
 # The version info for the project you're documenting, acts as replacement for

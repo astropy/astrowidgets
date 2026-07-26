@@ -195,7 +195,7 @@ class ImageWidget(ipyw.VBox, CursorInfoMixin, ImageViewerLogic):
     """
 
     # List of marker names that are for internal use only
-    RESERVED_MARKER_SET_NAMES = ["all"]
+    RESERVED_MARKER_SET_NAMES = ("all",)
 
     # Default marker name for marking via API
     DEFAULT_MARKER_NAME: str = "default"
