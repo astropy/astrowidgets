@@ -58,6 +58,12 @@ build-backend = 'setuptools.build_meta'
 [tool.setuptools]
 packages = ["astrowidgets"]
 
+# setuptools_scm only activates when this section is present; without it the
+# dynamic version silently falls back to 0.0.0. version_file generates the
+# astrowidgets/version.py that __init__.py imports __version__ from.
+[tool.setuptools_scm]
+version_file = "astrowidgets/version.py"
+
 [tool.ruff]
 line-length = 79
 
