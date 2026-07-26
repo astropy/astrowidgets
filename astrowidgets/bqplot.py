@@ -1,24 +1,23 @@
 from contextlib import ExitStack, contextmanager
 from pathlib import Path
 
-import numpy as np
-from astropy.nddata import NDData
 import astropy.visualization as apviz
-
-from bqplot import Figure, LinearScale, Axis, ColorScale, PanZoom, Scatter
-from bqplot_image_gl import ImageGL
-from bqplot_image_gl.interacts import (MouseInteraction,
-                                       keyboard_events, mouse_events)
-
 import ipywidgets as ipw
-
-from matplotlib import pyplot
-from matplotlib.colors import to_hex
-
+import numpy as np
 from astro_image_display_api.image_viewer_logic import (
     ImageViewerLogic,
     docs_from_image_viewer_logic_if_missing,
 )
+from astropy.nddata import NDData
+from bqplot import Axis, ColorScale, Figure, LinearScale, PanZoom, Scatter
+from bqplot_image_gl import ImageGL
+from bqplot_image_gl.interacts import (
+    MouseInteraction,
+    keyboard_events,
+    mouse_events,
+)
+from matplotlib import pyplot
+from matplotlib.colors import to_hex
 
 from astrowidgets.cursor_info import CursorInfoMixin
 
@@ -30,9 +29,10 @@ class _AstroImage(ipw.VBox):
     bqplot is involved for its pan/zoom capabilities, and it presents as
     a box to obscure the usual bqplot properties and methods.
     """
-    def __init__(self, image_data=None,
-                 display_width=500,
-                 viewer_aspect_ratio=1.0):
+
+    def __init__(
+        self, image_data=None, display_width=500, viewer_aspect_ratio=1.0
+    ):
         super().__init__()
 
         self._viewer_aspect_ratio = viewer_aspect_ratio
@@ -40,42 +40,60 @@ class _AstroImage(ipw.VBox):
         self._display_width = display_width
         self._display_height = self._viewer_aspect_ratio * self._display_width
 
-        layout = ipw.Layout(width=f'{self._display_width}px',
-                            height=f'{self._display_height}px',
-                            justify_content='center')
+        layout = ipw.Layout(
+            width=f"{self._display_width}px",
+            height=f"{self._display_height}px",
+            justify_content="center",
+        )
 
         self._figure_layout = layout
 
-        scale_x = LinearScale(min=0, max=1,  # self._image_shape[1],
-                              allow_padding=False)
-        scale_y = LinearScale(min=0, max=1,  # self._image_shape[0],
-                              allow_padding=False)
-        self._scales = {'x': scale_x, 'y': scale_y}
+        scale_x = LinearScale(
+            min=0,
+            max=1,  # self._image_shape[1],
+            allow_padding=False,
+        )
+        scale_y = LinearScale(
+            min=0,
+            max=1,  # self._image_shape[0],
+            allow_padding=False,
+        )
+        self._scales = {"x": scale_x, "y": scale_y}
         axis_x = Axis(scale=scale_x, visible=False)
-        axis_y = Axis(scale=scale_y, orientation='vertical', visible=False)
-        scales_image = {'x': scale_x, 'y': scale_y,
-                        'image': ColorScale(max=1, min=0,
-                                            scheme='Greys')}
+        axis_y = Axis(scale=scale_y, orientation="vertical", visible=False)
+        scales_image = {
+            "x": scale_x,
+            "y": scale_y,
+            "image": ColorScale(max=1, min=0, scheme="Greys"),
+        }
 
         self._image_shape = None
 
         self._scatter_marks = {}
 
-        self._figure = Figure(scales=self._scales, axes=[axis_x, axis_y],
-                              fig_margin=dict(top=0, left=0,
-                                              right=0, bottom=0),
-                              layout=layout)
+        self._figure = Figure(
+            scales=self._scales,
+            axes=[axis_x, axis_y],
+            fig_margin={"top": 0, "left": 0, "right": 0, "bottom": 0},
+            layout=layout,
+        )
 
-        self._image = ImageGL(image=np.zeros(shape=[1, 1]), scales=scales_image)
+        self._image = ImageGL(
+            image=np.zeros(shape=[1, 1]), scales=scales_image
+        )
 
-        self._figure.marks = (self._image, )
+        self._figure.marks = (self._image,)
 
-        panzoom = PanZoom(scales={'x': [scales_image['x']],
-                                  'y': [scales_image['y']]})
-        interaction = MouseInteraction(x_scale=scales_image['x'],
-                                       y_scale=scales_image['y'],
-                                       move_throttle=70, next=panzoom,
-                                       events=keyboard_events + mouse_events)
+        panzoom = PanZoom(
+            scales={"x": [scales_image["x"]], "y": [scales_image["y"]]}
+        )
+        interaction = MouseInteraction(
+            x_scale=scales_image["x"],
+            y_scale=scales_image["y"],
+            move_throttle=70,
+            next=panzoom,
+            events=keyboard_events + mouse_events,
+        )
 
         self._figure.interaction = interaction
 
@@ -86,7 +104,7 @@ class _AstroImage(ipw.VBox):
         if image_data:
             self.set_data(image_data, reset_view=True)
 
-        self.children = (self._figure, )
+        self.children = (self._figure,)
 
     @property
     def data_aspect_ratio(self):
@@ -101,24 +119,22 @@ class _AstroImage(ipw.VBox):
         square = self.data_aspect_ratio == 1
 
         if wide:
-            self._scales['x'].min = 0
-            self._scales['x'].max = self._image_shape[1]
+            self._scales["x"].min = 0
+            self._scales["x"].max = self._image_shape[1]
             self._set_scale_aspect_ratio_to_match_viewer()
         elif tall or square:
-            self._scales['y'].min = 0
-            self._scales['y'].max = self._image_shape[0]
-            self._set_scale_aspect_ratio_to_match_viewer(reset_scale='x')
+            self._scales["y"].min = 0
+            self._scales["y"].max = self._image_shape[0]
+            self._set_scale_aspect_ratio_to_match_viewer(reset_scale="x")
 
         # Great, now let's center
-        self.center = (self._image_shape[1] / 2,
-                       self._image_shape[0] / 2)
+        self.center = (self._image_shape[1] / 2, self._image_shape[0] / 2)
 
-    def _set_scale_aspect_ratio_to_match_viewer(self,
-                                                reset_scale='y'):
+    def _set_scale_aspect_ratio_to_match_viewer(self, reset_scale="y"):
         # Set the scales so that they match the aspect ratio
         # of the viewer, preserving the current image center.
         width_x, width_y = self.scale_widths
-        frozen_width = dict(y=width_x, x=width_y)
+        frozen_width = {"y": width_x, "x": width_y}
         scale_aspect = width_x / width_y
         figure_x = float(self._figure.layout.width[:-2])
         figure_y = float(self._figure.layout.height[:-2])
@@ -127,13 +143,15 @@ class _AstroImage(ipw.VBox):
         if abs(figure_aspect - scale_aspect) > 1e-4:
             # Make the scale aspect ratio match the
             # figure layout aspect ratio
-            if reset_scale == 'y':
+            if reset_scale == "y":
                 scale_factor = 1 / figure_aspect
             else:
                 scale_factor = figure_aspect
 
             self._scales[reset_scale].min = 0
-            self._scales[reset_scale].max = frozen_width[reset_scale] * scale_factor
+            self._scales[reset_scale].max = (
+                frozen_width[reset_scale] * scale_factor
+            )
             self.center = current_center
 
     @contextmanager
@@ -152,9 +170,12 @@ class _AstroImage(ipw.VBox):
         the old image against the new scales (a "refit" flash) nor recolors
         the old image before the new data arrives.
         """
-        with self._scales['y'].hold_sync(), self._scales['x'].hold_sync(), \
-                self._image.scales['image'].hold_sync(), \
-                self._image.hold_sync():
+        with (
+            self._scales["y"].hold_sync(),
+            self._scales["x"].hold_sync(),
+            self._image.scales["image"].hold_sync(),
+            self._image.hold_sync(),
+        ):
             yield
 
     def set_data(self, image_data, reset_view=True):
@@ -174,8 +195,8 @@ class _AstroImage(ipw.VBox):
 
     @property
     def scale_widths(self):
-        width_x = self._scales['x'].max - self._scales['x'].min
-        width_y = self._scales['y'].max - self._scales['y'].min
+        width_x = self._scales["x"].max - self._scales["x"].min
+        width_y = self._scales["y"].max - self._scales["y"].min
         return (width_x, width_y)
 
     @property
@@ -192,8 +213,8 @@ class _AstroImage(ipw.VBox):
         """
         Center of current view in pixels in x, y.
         """
-        x_center = (self._scales['x'].min + self._scales['x'].max) / 2
-        y_center = (self._scales['y'].min + self._scales['y'].max) / 2
+        x_center = (self._scales["x"].min + self._scales["x"].max) / 2
+        y_center = (self._scales["y"].min + self._scales["y"].max) / 2
         return (x_center, y_center)
 
     @center.setter
@@ -201,10 +222,10 @@ class _AstroImage(ipw.VBox):
         x_c, y_c = value
 
         width_x, width_y = self.scale_widths
-        self._scales['x'].max = x_c + width_x / 2
-        self._scales['x'].min = x_c - width_x / 2
-        self._scales['y'].max = y_c + width_y / 2
-        self._scales['y'].min = y_c - width_y / 2
+        self._scales["x"].max = x_c + width_x / 2
+        self._scales["x"].min = x_c - width_x / 2
+        self._scales["y"].max = y_c + width_y / 2
+        self._scales["y"].min = y_c - width_y / 2
 
     @property
     def interaction(self):
@@ -212,12 +233,14 @@ class _AstroImage(ipw.VBox):
 
     def set_color(self, colors):
         # colors here means a list of hex colors
-        self._image.scales['image'].colors = colors
+        self._image.scales["image"].colors = colors
 
     def _check_file_exists(self, filename, overwrite=False):
         if Path(filename).exists() and not overwrite:
-            raise ValueError(f'File named {filename} already exists. Use '
-                             f'overwrite=True to overwrite it.')
+            raise ValueError(
+                f"File named {filename} already exists. Use "
+                f"overwrite=True to overwrite it."
+            )
 
     def save_png(self, filename, overwrite=False):
         self._check_file_exists(filename, overwrite=overwrite)
@@ -251,18 +274,18 @@ class _AstroImage(ipw.VBox):
         if direction == "smallest":
             # Set the scale with the smallest width to the desired size
             if self.viewer_size[0] < self.viewer_size[1]:
-                direction = 'x'
+                direction = "x"
             else:
-                direction = 'y'
+                direction = "y"
 
         scale_to_set = self._scales[direction]
         cen = {}
-        cen['x'], cen['y'] = self.center
+        cen["x"], cen["y"] = self.center
         with scale_to_set.hold_trait_notifications():
             scale_to_set.min = cen[direction] - size / 2
             scale_to_set.max = cen[direction] + size / 2
 
-        reset_scale = 'x' if direction == 'y' else 'y'
+        reset_scale = "x" if direction == "y" else "y"
 
         self._set_scale_aspect_ratio_to_match_viewer(reset_scale)
 
@@ -278,8 +301,8 @@ class _AstroImage(ipw.VBox):
         # and the result would be the same.
         figure_width = float(self._figure.layout.width[:-2])
         new_width = figure_width / zoom_level
-        self.set_size(new_width, 'x')
-        self._set_scale_aspect_ratio_to_match_viewer('y')
+        self.set_size(new_width, "x")
+        self._set_scale_aspect_ratio_to_match_viewer("y")
 
     def get_current_width(self):
         """
@@ -298,22 +321,26 @@ class _AstroImage(ipw.VBox):
 
         return scale_width
 
-    def plot_named_markers(self, x, y, mark_id, color='yellow',
-                           size=100, shape='circle', **kwd):
-        scale_dict = dict(x=self._scales['x'], y=self._scales['y'])
-        sc = Scatter(scales=scale_dict,
-                     x=np.asarray(x), y=np.asarray(y),
-                     colors=[color],
-                     default_size=size,
-                     marker=shape,
-                     fill=False)
+    def plot_named_markers(
+        self, x, y, mark_id, color="yellow", size=100, shape="circle", **kwd
+    ):
+        scale_dict = {"x": self._scales["x"], "y": self._scales["y"]}
+        sc = Scatter(
+            scales=scale_dict,
+            x=np.asarray(x),
+            y=np.asarray(y),
+            colors=[color],
+            default_size=size,
+            marker=shape,
+            fill=False,
+        )
 
         self._scatter_marks[mark_id] = sc
         self._update_marks()
 
     def remove_named_markers(self, mark_id):
         if isinstance(mark_id, str):
-            if mark_id == '*':
+            if mark_id == "*":
                 self.remove_markers()
                 return
             else:
@@ -322,7 +349,7 @@ class _AstroImage(ipw.VBox):
             try:
                 del self._scatter_marks[m_id]
             except KeyError:
-                raise ValueError(f'Markers {m_id} are not present.')
+                raise ValueError(f"Markers {m_id} are not present.")
 
         self._update_marks()
 
@@ -363,13 +390,15 @@ class ImageWidget(ipw.VBox, CursorInfoMixin, ImageViewerLogic):
         # the post-init hook it would otherwise provide to set up its state.
         ImageViewerLogic.__post_init__(self)
 
-        self._astro_im = _AstroImage(display_width=display_width,
-                                     viewer_aspect_ratio=display_aspect_ratio)
+        self._astro_im = _AstroImage(
+            display_width=display_width,
+            viewer_aspect_ratio=display_aspect_ratio,
+        )
         # Cut out the sky background at the bottom and clip only the
         # brightest pixels at the top.
         self._default_cuts = apviz.AsymmetricPercentileInterval(30, 96)
         self._default_stretch = None
-        self._default_colormap = 'Greys_r'
+        self._default_colormap = "Greys_r"
         # The API layer stores settings per image, so nothing can be stored
         # before a load; apply the default colormap directly to the front
         # end so the empty viewer already shows it. When the first image is
@@ -407,16 +436,17 @@ class ImageWidget(ipw.VBox, CursorInfoMixin, ImageViewerLogic):
 
             The ``event_data`` contains all of the information we need.
             """
-            if event_data['event'] == 'mousemove':
+            if event_data["event"] == "mousemove":
                 self._mouse_move(event_data)
-            elif event_data['event'] == 'click':
+            elif event_data["event"] == "click":
                 self._mouse_click(event_data)
 
         self._astro_im.interaction.on_msg(on_mouse_message)
 
     def _mouse_move(self, event_data):
-        self._update_cursor_text(event_data['domain']['x'],
-                                 event_data['domain']['y'])
+        self._update_cursor_text(
+            event_data["domain"]["x"], event_data["domain"]["y"]
+        )
 
     def _mouse_click(self, event_data):
         if self._data is None:
@@ -436,13 +466,17 @@ class ImageWidget(ipw.VBox, CursorInfoMixin, ImageViewerLogic):
         has either changed the zoom or has panned, and update the stored
         viewport (center and field of view) to match.
         """
+
         def update_viewport(event):
             """
             Watch for changes in the viewport (pan or zoom) from the viewer.
             """
             new_width = self._astro_im.get_current_width()
-            if (new_width is None or self._updating_viewport
-                    or not self._displayed_image_labels):
+            if (
+                new_width is None
+                or self._updating_viewport
+                or not self._displayed_image_labels
+            ):
                 # There is no image yet, or this object is in the process
                 # of changing the viewport, so return
                 return
@@ -450,8 +484,9 @@ class ImageWidget(ipw.VBox, CursorInfoMixin, ImageViewerLogic):
             # A pan or zoom in the GUI is always a change to the view of
             # the displayed image.
             image_label = self._displayed_image_labels[0]
-            current = self.get_viewport(sky_or_pixel='pixel',
-                                        image_label=image_label)
+            current = self.get_viewport(
+                sky_or_pixel="pixel", image_label=image_label
+            )
             old_width = current["fov"]
             old_center = current["center"]
             new_center = self._astro_im.center
@@ -468,8 +503,9 @@ class ImageWidget(ipw.VBox, CursorInfoMixin, ImageViewerLogic):
                 # Let the viewport handler know the GUI itself generated this
                 # change, which means the GUI does not need to be updated.
                 self._viewport_change_source_is_gui = True
-                self.set_viewport(center=new_center, fov=new_width,
-                                  image_label=image_label)
+                self.set_viewport(
+                    center=new_center, fov=new_width, image_label=image_label
+                )
 
         # Observe changes to the maximum of both the x and y scales so that
         # horizontal pan, vertical pan, and zoom are all detected. Observing
@@ -478,8 +514,11 @@ class ImageWidget(ipw.VBox, CursorInfoMixin, ImageViewerLogic):
         #
         # If things seem laggy in the future, check whether throttling
         # the updates helps.
-        for scale in (self._astro_im._scales['x'], self._astro_im._scales['y']):
-            scale.observe(update_viewport, names='max')
+        for scale in (
+            self._astro_im._scales["x"],
+            self._astro_im._scales["y"],
+        ):
+            scale.observe(update_viewport, names="max")
 
     def _interval_and_stretch(self, stretch=None, cuts=None):
         """
@@ -498,8 +537,10 @@ class ImageWidget(ipw.VBox, CursorInfoMixin, ImageViewerLogic):
 
     def _send_data(self, reset_view=True, stretch=None, cuts=None):
         if self._data is not None:
-            self._astro_im.set_data(self._interval_and_stretch(stretch=stretch, cuts=cuts),
-                                    reset_view=reset_view)
+            self._astro_im.set_data(
+                self._interval_and_stretch(stretch=stretch, cuts=cuts),
+                reset_view=reset_view,
+            )
 
     def _refresh_display(self, image_label=None):
         """
@@ -510,9 +551,11 @@ class ImageWidget(ipw.VBox, CursorInfoMixin, ImageViewerLogic):
         if self._data is None or self._refresh_deferred:
             return
 
-        self._send_data(cuts=self.get_cuts(image_label=image_label),
-                        stretch=self.get_stretch(image_label=image_label),
-                        reset_view=False)
+        self._send_data(
+            cuts=self.get_cuts(image_label=image_label),
+            stretch=self.get_stretch(image_label=image_label),
+            reset_view=False,
+        )
 
     @contextmanager
     def _defer_refresh(self):
@@ -651,7 +694,8 @@ class ImageWidget(ipw.VBox, CursorInfoMixin, ImageViewerLogic):
             Resolved label whose stored colormap to apply.
         """
         self._astro_im.set_color(
-            bqcolors(self.get_colormap(image_label=image_label)))
+            bqcolors(self.get_colormap(image_label=image_label))
+        )
 
     def _apply_viewport(self, image_label):
         """
@@ -675,15 +719,16 @@ class ImageWidget(ipw.VBox, CursorInfoMixin, ImageViewerLogic):
 
         # Get the viewport in pixel coordinates; the API layer handles all
         # of the WCS stuff in the event the stored fov is in sky units.
-        viewport = self.get_viewport(image_label=image_label,
-                                     sky_or_pixel='pixel')
+        viewport = self.get_viewport(
+            image_label=image_label, sky_or_pixel="pixel"
+        )
 
         # Suppress the handling of the scale changes made below as if they
         # were a pan or zoom from the GUI.
         self._updating_viewport = True
         try:
-            self._astro_im.center = viewport['center']
-            self._astro_im.set_size(viewport['fov'], direction='x')
+            self._astro_im.center = viewport["center"]
+            self._astro_im.set_size(viewport["fov"], direction="x")
         finally:
             self._updating_viewport = False
 
@@ -711,7 +756,7 @@ class ImageWidget(ipw.VBox, CursorInfoMixin, ImageViewerLogic):
             catalog_label,
             color=style.get("color", "red"),
             # bqplot expects the size in pixels squared
-            size=style.get("size", 5)**2,
+            size=style.get("size", 5) ** 2,
             shape=style.get("shape", "circle"),
         )
 
@@ -737,13 +782,14 @@ class ImageWidget(ipw.VBox, CursorInfoMixin, ImageViewerLogic):
         """
         p = Path(filename)
 
-        if p.suffix == '.png':
+        if p.suffix == ".png":
             self._astro_im.save_png(filename, overwrite=overwrite)
-        elif p.suffix == '.svg':
+        elif p.suffix == ".svg":
             self._astro_im.save_svg(filename, overwrite=overwrite)
         else:
-            raise ValueError('Saving is not supported for that'
-                             'file type. Use .png or .svg')
+            raise ValueError(
+                "Saving is not supported for that file type. Use .png or .svg"
+            )
 
     @property
     def print_out(self):

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Licensed under a 3-clause BSD style license - see LICENSE.rst
 #
 # Astropy documentation build configuration file.
@@ -27,14 +26,14 @@
 
 import datetime
 import sys
-from pathlib import Path
 import tomllib
+from pathlib import Path
 
 from astrowidgets import __version__ as aw_version
 
 try:
     from sphinx_astropy.conf.v1 import *
-    from sphinx_astropy.conf.v1 import rst_epilog, exclude_patterns  # noqa
+    from sphinx_astropy.conf.v1 import exclude_patterns, rst_epilog
 except ImportError:
     print(
         "ERROR: the documentation requires the sphinx-astropy package to be installed"
@@ -63,7 +62,7 @@ highlight_language = "python3"
 
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
-exclude_patterns.append("_templates")  # noqa
+exclude_patterns.append("_templates")
 
 # This is added to the end of RST files - a good place to put substitutions to
 # be used globally.
@@ -76,7 +75,7 @@ rst_epilog += """
 project = project_metadata.get("name", "astrowidgets")
 author = ", ".join(a["name"] for a in project_metadata.get("authors", []))
 # release = project_metadata.get("version", "")
-copyright = "{0}, {1}".format(datetime.datetime.now().year, author)
+copyright = f"{datetime.datetime.now(tz=datetime.UTC).year}, {author}"
 repo_url = project_metadata.get("urls", {}).get("Repository", "")
 
 # The version info for the project you're documenting, acts as replacement for
@@ -130,7 +129,7 @@ html_theme_options = {
 
 # The name for this set of Sphinx documents.  If None, it defaults to
 # "<project> v<release> documentation".
-html_title = "{0} v{1}".format(project, release)
+html_title = f"{project} v{release}"
 
 # Output file base name for HTML help builder.
 htmlhelp_basename = project + "doc"
@@ -147,7 +146,9 @@ latex_documents = [
 
 # One entry per manual page. List of tuples
 # (source start file, name, description, authors, manual section).
-man_pages = [("index", project.lower(), project + " Documentation", [author], 1)]
+man_pages = [
+    ("index", project.lower(), project + " Documentation", [author], 1)
+]
 
 # -- Options for the edit_on_github extension ---------------------------------
 

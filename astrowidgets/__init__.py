@@ -2,6 +2,6 @@
 try:
     from .version import version as __version__
 except ImportError:
-    __version__ = ''
+    __version__ = ""
 
-#from .ginga import *  # noqa
+# from .ginga import *
