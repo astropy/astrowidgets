@@ -788,7 +788,7 @@ class ImageWidget(ipw.VBox, CursorInfoMixin, ImageViewerLogic):
             self._astro_im.save_svg(filename, overwrite=overwrite)
         else:
             raise ValueError(
-                "Saving is not supported for thatfile type. Use .png or .svg"
+                "Saving is not supported for that file type. Use .png or .svg"
             )
 
     @property
