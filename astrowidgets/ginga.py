@@ -4,16 +4,26 @@
 import functools
 from pathlib import Path
 
-# THIRD-PARTY
-import numpy as np
-from astropy.nddata import NDData
-from astropy.table import Table
-from astropy.visualization import (AsinhStretch, LinearStretch, LogStretch,
-                                   PowerDistStretch, SinhStretch, SqrtStretch,
-                                   SquaredStretch)
-
 # Jupyter widgets
 import ipywidgets as ipyw
+
+# THIRD-PARTY
+import numpy as np
+from astro_image_display_api.image_viewer_logic import (
+    ImageViewerLogic,
+    docs_from_image_viewer_logic_if_missing,
+)
+from astropy.nddata import NDData
+from astropy.table import Table
+from astropy.visualization import (
+    AsinhStretch,
+    LinearStretch,
+    LogStretch,
+    PowerDistStretch,
+    SinhStretch,
+    SqrtStretch,
+    SquaredStretch,
+)
 
 # Ginga
 from ginga import ColorDist
@@ -22,14 +32,9 @@ from ginga.AstroImage import AstroImage
 from ginga.canvas.CanvasObject import drawCatalog
 from ginga.web.jupyterw.ImageViewJpw import EnhancedCanvasView
 
-from astro_image_display_api.image_viewer_logic import (
-    ImageViewerLogic,
-    docs_from_image_viewer_logic_if_missing,
-)
-
 from astrowidgets.cursor_info import CursorInfoMixin
 
-__all__ = ['ImageWidget']
+__all__ = ["ImageWidget"]
 
 
 class _AstropyStretchDist(ColorDist.ColorDistBase):
@@ -141,12 +146,14 @@ def _ginga_dist_for_stretch(stretch, hashsize):
     match stretch:
         case AsinhStretch():
             factor = 1.0 / stretch.a
-            return ColorDist.AsinhDist(hashsize, factor=factor,
-                                       nonlinearity=np.arcsinh(factor))
+            return ColorDist.AsinhDist(
+                hashsize, factor=factor, nonlinearity=np.arcsinh(factor)
+            )
         case SinhStretch():
             factor = 1.0 / stretch.a
-            return ColorDist.SinhDist(hashsize, factor=factor,
-                                      nonlinearity=np.sinh(factor))
+            return ColorDist.SinhDist(
+                hashsize, factor=factor, nonlinearity=np.sinh(factor)
+            )
         case LogStretch():
             return ColorDist.LogDist(hashsize, exp=stretch.a)
         case PowerDistStretch():
@@ -186,17 +193,19 @@ class ImageWidget(ipyw.VBox, CursorInfoMixin, ImageViewerLogic):
     image_width, image_height : int
         Dimension of the Jupyter notebook's image widget, in pixels.
     """
+
     # List of marker names that are for internal use only
-    RESERVED_MARKER_SET_NAMES = ['all']
+    RESERVED_MARKER_SET_NAMES = ["all"]
 
     # Default marker name for marking via API
-    DEFAULT_MARKER_NAME: str = 'default'
+    DEFAULT_MARKER_NAME: str = "default"
 
     # Default marker name for interactive marking
-    DEFAULT_INTERACTIVE_MARKER_NAME: str = 'interactive'
+    DEFAULT_INTERACTIVE_MARKER_NAME: str = "interactive"
 
-    def __init__(self, *args, logger=None, image_width=500, image_height=500,
-                 **kwargs):
+    def __init__(
+        self, *args, logger=None, image_width=500, image_height=500, **kwargs
+    ):
         super().__init__(*args, **kwargs)
         # ImageViewerLogic is a dataclass; we do not run its __init__, so run
         # the post-init hook it would otherwise provide to set up its state.
@@ -211,15 +220,15 @@ class ImageWidget(ipyw.VBox, CursorInfoMixin, ImageViewerLogic):
         # logic layer.
         self._viewer.settings.set(sanity_check_scale=False)
 
-        self._jup_img = ipyw.Image(format='jpeg')
+        self._jup_img = ipyw.Image(format="jpeg")
 
         # Set the image margin over the widget's default of 2px on all sides.
-        self._jup_img.layout.margin = '0'
+        self._jup_img.layout.margin = "0"
 
         # Set both of these to ensure consistent display in the notebook and in
         # jupyterlab when the image is put into a container smaller than itself.
-        self._jup_img.max_width = '100%'
-        self._jup_img.height = 'auto'
+        self._jup_img.max_width = "100%"
+        self._jup_img.height = "auto"
 
         # Set the width of the box containing the image to the desired width.
         # The height is set automatically by the image aspect ratio.
@@ -249,11 +258,13 @@ class ImageWidget(ipyw.VBox, CursorInfoMixin, ImageViewerLogic):
 
         bind_map = self._viewer.get_bindmap()
         # Right-click and drag adjusts the contrast; shift-right-click restores.
-        bind_map.map_event(None, (), 'ms_right', 'contrast')
-        bind_map.map_event(None, ('shift',), 'ms_right', 'contrast_restore')
+        bind_map.map_event(None, (), "ms_right", "contrast")
+        bind_map.map_event(None, ("shift",), "ms_right", "contrast_restore")
 
         # State for interactive marking.
-        self._interactive_marker_set_name = self.DEFAULT_INTERACTIVE_MARKER_NAME
+        self._interactive_marker_set_name = (
+            self.DEFAULT_INTERACTIVE_MARKER_NAME
+        )
         self._interactive_points = []
         self._interactive_style = self._default_catalog_style.copy()
 
@@ -263,8 +274,8 @@ class ImageWidget(ipyw.VBox, CursorInfoMixin, ImageViewerLogic):
         self._updating_viewport = False
 
         # coordinates display
-        self._viewer.add_callback('cursor-changed', self._mouse_move_cb)
-        self._viewer.add_callback('cursor-down', self._mouse_click_cb)
+        self._viewer.add_callback("cursor-changed", self._mouse_move_cb)
+        self._viewer.add_callback("cursor-down", self._mouse_click_cb)
 
         # Output widget that captures printed output, for debugging.
         self._print_out = ipyw.Output()
@@ -341,11 +352,11 @@ class ImageWidget(ipyw.VBox, CursorInfoMixin, ImageViewerLogic):
         if self.is_marking:
             self._append_interactive_marker(data_x, data_y)
             with self._print_out:
-                print('Selected {} {}'.format(data_x, data_y))
+                print(f"Selected {data_x} {data_y}")
         elif self.click_center:
             self._center_on((data_x, data_y))
             with self._print_out:
-                print('Centered on X={} Y={}'.format(data_x, data_y))
+                print(f"Centered on X={data_x} Y={data_y}")
 
     # ------------------------------------------------------------------
     # Image rendering
@@ -386,7 +397,7 @@ class ImageWidget(ipyw.VBox, CursorInfoMixin, ImageViewerLogic):
 
         if isinstance(data, NDData):
             image.set_data(np.asarray(data.data))
-            wcs = getattr(data, 'wcs', None)
+            wcs = getattr(data, "wcs", None)
             if wcs is not None:
                 # A bad or exotic WCS can fail anywhere in here -- header
                 # serialization, ginga's header parser, or set_wcs -- so guard
@@ -395,12 +406,14 @@ class ImageWidget(ipyw.VBox, CursorInfoMixin, ImageViewerLogic):
                 # still propagates, and log the traceback for debugging.
                 try:
                     from ginga.util.wcsmod.wcs_astropy import AstropyWCS
+
                     _wcs = AstropyWCS(self.logger)
                     _wcs.load_header(wcs.to_header())
                     image.set_wcs(_wcs)
                 except Exception:  # pragma: no cover - defensive
-                    self.logger.warning('Unable to set WCS from image',
-                                        exc_info=True)
+                    self.logger.warning(
+                        "Unable to set WCS from image", exc_info=True
+                    )
         else:
             image.set_data(np.asarray(data))
 
@@ -451,7 +464,9 @@ class ImageWidget(ipyw.VBox, CursorInfoMixin, ImageViewerLogic):
         # Inject a fully parametrized distribution; set_dist fires the rgbmap's
         # 'changed' callback, which redraws. (set_color_algorithm cannot carry
         # parameters -- it only ever builds a distribution with ginga defaults.)
-        rgbmap.set_dist(_ginga_dist_for_stretch(stretch, rgbmap.get_hash_size()))
+        rgbmap.set_dist(
+            _ginga_dist_for_stretch(stretch, rgbmap.get_hash_size())
+        )
 
     def set_colormap(self, map_name, image_label=None, **kwargs):
         # Ginga only logs (rather than raises) on an unknown colormap name,
@@ -459,8 +474,9 @@ class ImageWidget(ipyw.VBox, CursorInfoMixin, ImageViewerLogic):
         # validate the name up front -- even for images that are not
         # displayed, which the _apply_colormap hook would never see.
         if map_name not in ginga_cmap.get_names():
-            raise ValueError(f'Colormap {map_name!r} is not a valid ginga '
-                             'colormap name.')
+            raise ValueError(
+                f"Colormap {map_name!r} is not a valid ginga colormap name."
+            )
         super().set_colormap(map_name, image_label=image_label, **kwargs)
 
     def _apply_colormap(self, image_label):
@@ -522,21 +538,31 @@ class ImageWidget(ipyw.VBox, CursorInfoMixin, ImageViewerLogic):
             A factory accepting ``x``, ``y`` and ``coord`` keyword arguments
             that returns a ginga canvas object.
         """
-        shape = style.get('shape', 'circle')
-        color = style.get('color', 'red')
-        size = style.get('size', 5)
-        linewidth = style.get('linewidth', 1)
+        shape = style.get("shape", "circle")
+        color = style.get("color", "red")
+        size = style.get("size", 5)
+        linewidth = style.get("linewidth", 1)
 
-        if shape in ('square', 'box'):
-            return functools.partial(self.dc.SquareBox, radius=size, color=color,
-                                     linewidth=linewidth)
-        elif shape in ('cross', 'plus', 'crosshair'):
-            point_style = 'plus' if shape == 'plus' else 'cross'
-            return functools.partial(self.dc.Point, radius=size, style=point_style,
-                                     color=color, linewidth=linewidth)
+        if shape in ("square", "box"):
+            return functools.partial(
+                self.dc.SquareBox,
+                radius=size,
+                color=color,
+                linewidth=linewidth,
+            )
+        elif shape in ("cross", "plus", "crosshair"):
+            point_style = "plus" if shape == "plus" else "cross"
+            return functools.partial(
+                self.dc.Point,
+                radius=size,
+                style=point_style,
+                color=color,
+                linewidth=linewidth,
+            )
         else:  # circle and anything we do not specifically handle
-            return functools.partial(self.dc.Circle, radius=size, color=color,
-                                     linewidth=linewidth)
+            return functools.partial(
+                self.dc.Circle, radius=size, color=color, linewidth=linewidth
+            )
 
     def _draw_catalog(self, catalog_label):
         """
@@ -565,13 +591,20 @@ class ImageWidget(ipyw.VBox, CursorInfoMixin, ImageViewerLogic):
         if catalog is None or len(catalog) == 0:
             return
 
-        marker = self._make_marker(self.get_catalog_style(catalog_label=catalog_label))
+        marker = self._make_marker(
+            self.get_catalog_style(catalog_label=catalog_label)
+        )
 
         objs = []
-        for x, y in zip(catalog['x'], catalog['y']):
-            if x is None or y is None or np.ma.is_masked(x) or np.ma.is_masked(y):
+        for x, y in zip(catalog["x"], catalog["y"]):
+            if (
+                x is None
+                or y is None
+                or np.ma.is_masked(x)
+                or np.ma.is_masked(y)
+            ):
                 continue
-            objs.append(marker(x=float(x), y=float(y), coord='data'))
+            objs.append(marker(x=float(x), y=float(y), coord="data"))
 
         if objs:
             self._viewer.canvas.add(self.dc.CompoundObject(*objs), tag=tag)
@@ -612,10 +645,11 @@ class ImageWidget(ipyw.VBox, CursorInfoMixin, ImageViewerLogic):
         """
         # Read the stored viewport back in pixel coordinates without going
         # through our own get_viewport (which would try to sync ginga state).
-        viewport = super().get_viewport(sky_or_pixel='pixel',
-                                        image_label=image_label)
-        center_x, center_y = viewport['center']
-        fov_pixels = viewport['fov']
+        viewport = super().get_viewport(
+            sky_or_pixel="pixel", image_label=image_label
+        )
+        center_x, center_y = viewport["center"]
+        fov_pixels = viewport["fov"]
 
         self._updating_viewport = True
         try:
@@ -659,18 +693,21 @@ class ImageWidget(ipyw.VBox, CursorInfoMixin, ImageViewerLogic):
             # appropriate error instead of masking it here.
             return
 
-        if (image_label not in self._images
-                or self._viewer.get_image() is None
-                or image_label not in self._displayed_image_labels):
+        if (
+            image_label not in self._images
+            or self._viewer.get_image() is None
+            or image_label not in self._displayed_image_labels
+        ):
             # Only the displayed image can have been interactively panned or
             # zoomed; the live ginga state belongs to it alone.
             return
 
         # What pan/scale does the currently-stored viewport correspond to?
-        stored = super().get_viewport(sky_or_pixel='pixel',
-                                      image_label=image_label)
-        exp_x, exp_y = stored['center']
-        exp_fov = stored['fov']
+        stored = super().get_viewport(
+            sky_or_pixel="pixel", image_label=image_label
+        )
+        exp_x, exp_y = stored["center"]
+        exp_fov = stored["fov"]
         window = self._viewport_window_size
         exp_scale = window / exp_fov if exp_fov else None
 
@@ -689,8 +726,9 @@ class ImageWidget(ipyw.VBox, CursorInfoMixin, ImageViewerLogic):
         fov_pixels = window / cur_scale if cur_scale else exp_fov
         self._updating_viewport = True
         try:
-            super().set_viewport(center=(cur_x, cur_y), fov=fov_pixels,
-                                 image_label=image_label)
+            super().set_viewport(
+                center=(cur_x, cur_y), fov=fov_pixels, image_label=image_label
+            )
         finally:
             self._updating_viewport = False
 
@@ -720,9 +758,9 @@ class ImageWidget(ipyw.VBox, CursorInfoMixin, ImageViewerLogic):
     @click_center.setter
     def click_center(self, val):
         if not isinstance(val, bool):
-            raise ValueError('Must be True or False')
+            raise ValueError("Must be True or False")
         elif self.is_marking and val:
-            raise ValueError('Cannot set to True while marking is active')
+            raise ValueError("Cannot set to True while marking is active")
 
         if val:
             self.click_drag = False
@@ -740,19 +778,21 @@ class ImageWidget(ipyw.VBox, CursorInfoMixin, ImageViewerLogic):
     @click_drag.setter
     def click_drag(self, value):
         if not isinstance(value, bool):
-            raise ValueError('click_drag must be either True or False')
+            raise ValueError("click_drag must be either True or False")
         if self.is_marking:
-            raise ValueError('Interactive marking is in progress. Call '
-                             'stop_marking() to end marking before setting '
-                             'click_drag')
+            raise ValueError(
+                "Interactive marking is in progress. Call "
+                "stop_marking() to end marking before setting "
+                "click_drag"
+            )
         self._click_drag = value
         bindmap = self._viewer.get_bindmap()
         if value:
             # Only turn off click_center if click_drag is being set to True.
             self.click_center = False
-            bindmap.map_event(None, (), 'ms_left', 'pan')
+            bindmap.map_event(None, (), "ms_left", "pan")
         else:
-            bindmap.map_event(None, (), 'ms_left', 'cursor')
+            bindmap.map_event(None, (), "ms_left", "cursor")
 
     @property
     def scroll_pan(self):
@@ -765,14 +805,14 @@ class ImageWidget(ipyw.VBox, CursorInfoMixin, ImageViewerLogic):
     @scroll_pan.setter
     def scroll_pan(self, value):
         if not isinstance(value, bool):
-            raise ValueError('scroll_pan must be either True or False')
+            raise ValueError("scroll_pan must be either True or False")
 
         bindmap = self._viewer.get_bindmap()
         self._scroll_pan = value
         if value:
-            bindmap.map_event(None, (), 'pa_pan', 'pan')
+            bindmap.map_event(None, (), "pa_pan", "pan")
         else:
-            bindmap.map_event(None, (), 'pa_pan', 'zoom')
+            bindmap.map_event(None, (), "pa_pan", "zoom")
 
     @property
     def is_marking(self):
@@ -796,9 +836,11 @@ class ImageWidget(ipyw.VBox, CursorInfoMixin, ImageViewerLogic):
             Style for the interactive markers, e.g.
             ``{'shape': 'circle', 'color': 'cyan', 'size': 20}``.
         """
-        self._cached_state = dict(click_center=self.click_center,
-                                  click_drag=self.click_drag,
-                                  scroll_pan=self.scroll_pan)
+        self._cached_state = dict(
+            click_center=self.click_center,
+            click_drag=self.click_drag,
+            scroll_pan=self.scroll_pan,
+        )
         self.click_center = False
         self.click_drag = False
         # Ensure there is still a mouse way to pan.
@@ -810,7 +852,9 @@ class ImageWidget(ipyw.VBox, CursorInfoMixin, ImageViewerLogic):
             self._validate_marker_name(marker_name)
             self._interactive_marker_set_name = marker_name
         else:
-            self._interactive_marker_set_name = self.DEFAULT_INTERACTIVE_MARKER_NAME
+            self._interactive_marker_set_name = (
+                self.DEFAULT_INTERACTIVE_MARKER_NAME
+            )
 
         if marker is not None:
             self._interactive_style = marker
@@ -828,14 +872,15 @@ class ImageWidget(ipyw.VBox, CursorInfoMixin, ImageViewerLogic):
         """
         if self.is_marking:
             self._is_marking = False
-            self.click_center = self._cached_state['click_center']
-            self.click_drag = self._cached_state['click_drag']
-            self.scroll_pan = self._cached_state['scroll_pan']
+            self.click_center = self._cached_state["click_center"]
+            self.click_drag = self._cached_state["click_drag"]
+            self.scroll_pan = self._cached_state["scroll_pan"]
             self._cached_state = {}
             if clear_markers:
                 try:
                     self.remove_catalog(
-                        catalog_label=self._interactive_marker_set_name)
+                        catalog_label=self._interactive_marker_set_name
+                    )
                 except ValueError:
                     pass
                 self._interactive_points = []
@@ -855,10 +900,13 @@ class ImageWidget(ipyw.VBox, CursorInfoMixin, ImageViewerLogic):
             If ``marker_name`` is one of ``RESERVED_MARKER_SET_NAMES``.
         """
         if marker_name in self.RESERVED_MARKER_SET_NAMES:
-            raise ValueError('The marker name {} is not allowed. Any name is '
-                             'allowed except these: '
-                             '{}'.format(marker_name,
-                                         ', '.join(self.RESERVED_MARKER_SET_NAMES)))
+            raise ValueError(
+                "The marker name {} is not allowed. Any name is "
+                "allowed except these: "
+                "{}".format(
+                    marker_name, ", ".join(self.RESERVED_MARKER_SET_NAMES)
+                )
+            )
 
     def _append_interactive_marker(self, x, y):
         """
@@ -870,10 +918,12 @@ class ImageWidget(ipyw.VBox, CursorInfoMixin, ImageViewerLogic):
             Position of the new marker, in data (pixel) coordinates.
         """
         self._interactive_points.append((x, y))
-        table = Table(rows=self._interactive_points, names=['x', 'y'])
-        self.load_catalog(table,
-                          catalog_label=self._interactive_marker_set_name,
-                          catalog_style=self._interactive_style)
+        table = Table(rows=self._interactive_points, names=["x", "y"])
+        self.load_catalog(
+            table,
+            catalog_label=self._interactive_marker_set_name,
+            catalog_style=self._interactive_style,
+        )
 
     # ------------------------------------------------------------------
     # Saving
@@ -896,7 +946,9 @@ class ImageWidget(ipyw.VBox, CursorInfoMixin, ImageViewerLogic):
             If ``filename`` exists and ``overwrite`` is `False`.
         """
         if not overwrite and Path(filename).exists():
-            raise FileExistsError(f'File {filename} exists and overwrite=False')
+            raise FileExistsError(
+                f"File {filename} exists and overwrite=False"
+            )
 
         # Ginga renders the view server-side, so this works without a running
         # browser and honors the image format implied by the file extension.
