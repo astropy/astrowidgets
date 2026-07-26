@@ -74,7 +74,7 @@ class _AstroImage(ipw.VBox):
         self._figure = Figure(
             scales=self._scales,
             axes=[axis_x, axis_y],
-            fig_margin=dict(top=0, left=0, right=0, bottom=0),
+            fig_margin={"top": 0, "left": 0, "right": 0, "bottom": 0},
             layout=layout,
         )
 
@@ -134,7 +134,7 @@ class _AstroImage(ipw.VBox):
         # Set the scales so that they match the aspect ratio
         # of the viewer, preserving the current image center.
         width_x, width_y = self.scale_widths
-        frozen_width = dict(y=width_x, x=width_y)
+        frozen_width = {"y": width_x, "x": width_y}
         scale_aspect = width_x / width_y
         figure_x = float(self._figure.layout.width[:-2])
         figure_y = float(self._figure.layout.height[:-2])
@@ -324,7 +324,7 @@ class _AstroImage(ipw.VBox):
     def plot_named_markers(
         self, x, y, mark_id, color="yellow", size=100, shape="circle", **kwd
     ):
-        scale_dict = dict(x=self._scales["x"], y=self._scales["y"])
+        scale_dict = {"x": self._scales["x"], "y": self._scales["y"]}
         sc = Scatter(
             scales=scale_dict,
             x=np.asarray(x),

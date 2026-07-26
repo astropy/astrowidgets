@@ -836,11 +836,11 @@ class ImageWidget(ipyw.VBox, CursorInfoMixin, ImageViewerLogic):
             Style for the interactive markers, e.g.
             ``{'shape': 'circle', 'color': 'cyan', 'size': 20}``.
         """
-        self._cached_state = dict(
-            click_center=self.click_center,
-            click_drag=self.click_drag,
-            scroll_pan=self.scroll_pan,
-        )
+        self._cached_state = {
+            "click_center": self.click_center,
+            "click_drag": self.click_drag,
+            "scroll_pan": self.scroll_pan,
+        }
         self.click_center = False
         self.click_drag = False
         # Ensure there is still a mouse way to pan.
