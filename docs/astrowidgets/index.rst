@@ -66,5 +66,3 @@ Example Notebooks
 * `astrowidgets using the Ginga backend <https://github.com/astropy/astrowidgets/blob/main/example_notebooks/ginga_widget.ipynb>`_
 * `Using named markers to keep track of logically related markers <https://github.com/astropy/astrowidgets/blob/main/example_notebooks/named_markers.ipynb>`_
 * `Demonstration of GUI interactions <https://github.com/astropy/astrowidgets/blob/main/example_notebooks/gui_interactions.ipynb>`_
-
-
