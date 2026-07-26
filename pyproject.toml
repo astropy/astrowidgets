@@ -60,9 +60,9 @@ packages = ["astrowidgets"]
 
 # setuptools_scm only activates when this section is present; without it the
 # dynamic version silently falls back to 0.0.0. version_file generates the
-# astrowidgets/version.py that __init__.py imports __version__ from.
+# astrowidgets/_version.py that __init__.py imports __version__ from.
 [tool.setuptools_scm]
-version_file = "astrowidgets/version.py"
+version_file = "astrowidgets/_version.py"
 
 [tool.ruff]
 line-length = 79
