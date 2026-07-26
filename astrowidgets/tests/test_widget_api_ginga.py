@@ -35,21 +35,44 @@ def _loaded_widget():
     return image
 
 
-def _astropy_levels(stretch, dist):
-    # Reproduce the integer lookup table ginga would build from an astropy
-    # stretch evaluated on the same 0..1 ramp, so it can be compared against a
-    # configured ginga ColorDist's ``hash``.
+# Released ginga stores the ColorDist ``hash`` as integer levels
+# 0..colorlen-1; ginga master (unreleased 7.1) stores it as a normalized
+# float 0..1 curve and scales to the output level downstream.
+_GINGA_NORMALIZED_HASH = np.issubdtype(
+    ColorDist.LinearDist(16).hash.dtype, np.floating
+)
+
+
+def _expected_hash(stretch, dist):
+    # Reproduce the lookup table ginga would build from an astropy stretch
+    # evaluated on the same 0..1 ramp, in the same representation the
+    # installed ginga uses for a ColorDist's ``hash``.
     base = np.arange(0.0, float(dist.hashsize), 1.0) / dist.hashsize
     out = np.clip(np.asarray(stretch(base, clip=True), dtype=float), 0.0, 1.0)
+    if _GINGA_NORMALIZED_HASH:
+        return out.astype(np.float32)
     return (out * (dist.colorlen - 1)).astype(np.int64)
 
 
+def _assert_hash_matches(dist, stretch):
+    expected = _expected_hash(stretch, dist)
+    if _GINGA_NORMALIZED_HASH:
+        # The float32 storage of the same float64 computation; tolerance is
+        # far below one 8-bit quantization level (1/255).
+        np.testing.assert_allclose(dist.hash, expected, rtol=0.0, atol=1e-6)
+    else:
+        np.testing.assert_array_equal(dist.hash, expected)
+
+
 def _max_level_diff(dist, stretch):
-    return int(
-        np.abs(
-            dist.hash.astype(np.int64) - _astropy_levels(stretch, dist)
-        ).max()
-    )
+    # Largest difference between the configured dist and the astropy stretch,
+    # in units of 8-bit quantization levels whatever the hash representation.
+    diff = np.abs(
+        dist.hash.astype(np.float64) - _expected_hash(stretch, dist)
+    ).max()
+    if _GINGA_NORMALIZED_HASH:
+        diff *= 255
+    return round(diff)
 
 
 def test_instance():
@@ -106,7 +129,7 @@ def test_native_dist_matches_astropy_exactly(stretch):
     image = _loaded_widget()
     image.set_stretch(stretch)
     dist = image._viewer.get_rgbmap().get_dist()
-    np.testing.assert_array_equal(dist.hash, _astropy_levels(stretch, dist))
+    _assert_hash_matches(dist, stretch)
 
 
 @pytest.mark.parametrize(
@@ -149,7 +172,7 @@ def test_power_stretch_uses_adapter_not_ginga_power():
     image.set_stretch(stretch)
     dist = image._viewer.get_rgbmap().get_dist()
     assert not isinstance(dist, ColorDist.PowerDist)
-    np.testing.assert_array_equal(dist.hash, _astropy_levels(stretch, dist))
+    _assert_hash_matches(dist, stretch)
 
 
 def test_powerdist_stretch_maps_to_ginga_power():
@@ -169,7 +192,7 @@ def test_ginga_less_stretch_applied_faithfully_without_warning():
         warnings.simplefilter("error", AstropyUserWarning)
         image.set_stretch(stretch)
     dist = image._viewer.get_rgbmap().get_dist()
-    np.testing.assert_array_equal(dist.hash, _astropy_levels(stretch, dist))
+    _assert_hash_matches(dist, stretch)
 
 
 @pytest.mark.parametrize(
