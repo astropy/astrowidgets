@@ -42,6 +42,8 @@ test = [
     "pytest-astropy",
     "pytest-cov",
     "pytest-mock",
+    "pre-commit",
+    "ruff",
 ]
 docs = [
     "sphinx-astropy",
@@ -116,6 +118,7 @@ test = { features = ["test"], solve-group = "default" }
 [tool.pixi.tasks]
 # run unit tests with `pixi run test`
 test = { cmd = "pytest", default-environment = "test" }
+pre-commit = { cmd = "pre-commit run --all-files", default-environment = "test" }
 
 [tool.pixi.feature.test.dependencies]
 pytest = ">=9.1.1,<10"
@@ -125,4 +128,3 @@ pytest-mock = ">=3.15.1,<4"
 
 [tool.pixi.dependencies]
 nodejs = ">=26.4.0,<26.6"
-
