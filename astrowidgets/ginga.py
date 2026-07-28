@@ -37,11 +37,12 @@ from astrowidgets.cursor_info import CursorInfoMixin
 __all__ = ["ImageWidget"]
 
 # Released ginga (<= 7.0) expects a ColorDist ``hash`` holding integer levels
-# 0..colorlen-1; ginga master (unreleased 7.1) expects a normalized float 0..1
-# curve, scaled to the output level downstream by the Distribute stage.
-_GINGA_NORMALIZED_HASH = np.issubdtype(
-    ColorDist.LinearDist(16).hash.dtype, np.floating
-)
+# 0..colorlen-1. ginga 7.1 expects a normalized float 0..1 curve, scaled to
+# the output level downstream by the Distribute stage and installed via the
+# public ``set_hash()`` helper added in the fix for
+# https://github.com/ejeschke/ginga/issues/1148.
+# TODO: drop the legacy branch when astrowidgets requires ginga >= 7.1.
+_GINGA_HAS_SET_HASH = hasattr(ColorDist.ColorDistBase, "set_hash")
 
 
 class _AstropyStretchDist(ColorDist.ColorDistBase):
@@ -81,19 +82,19 @@ class _AstropyStretchDist(ColorDist.ColorDistBase):
         This method does not return a value; its side effect is to set
         ``self.hash`` to the stretch evaluated on ginga's 0..1 ramp, in the
         representation the installed ginga expects (normalized float curve
-        on ginga master, integer levels scaled to the color range on
-        released ginga).
+        stored through ``set_hash()`` on ginga >= 7.1, integer levels scaled
+        to the color range on released ginga).
         """
         base = np.arange(0.0, float(self.hashsize), 1.0) / self.hashsize
         out = np.asarray(self.stretch(base, clip=True), dtype=float)
         out = np.clip(out, 0.0, 1.0)
-        if _GINGA_NORMALIZED_HASH:
-            self.hash = out.astype(np.float32, copy=False)
+        if _GINGA_HAS_SET_HASH:
+            self.set_hash(out)
         else:
             # normalize to color range
             ll = out * (self.colorlen - 1)
             self.hash = ll.astype(np.uint, copy=False)
-        self.check_hash()
+            self.check_hash()
 
     def get_dist_pct(self, pct):
         """
