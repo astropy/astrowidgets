@@ -35,12 +35,11 @@ def _loaded_widget():
     return image
 
 
-# Released ginga stores the ColorDist ``hash`` as integer levels
-# 0..colorlen-1; ginga master (unreleased 7.1) stores it as a normalized
-# float 0..1 curve and scales to the output level downstream.
-_GINGA_NORMALIZED_HASH = np.issubdtype(
-    ColorDist.LinearDist(16).hash.dtype, np.floating
-)
+# Released ginga (<= 7.0) stores the ColorDist ``hash`` as integer levels
+# 0..colorlen-1; ginga 7.1 stores it as a normalized float 0..1 curve
+# installed via the public ``set_hash()`` helper added in the fix for
+# https://github.com/ejeschke/ginga/issues/1148.
+_GINGA_HAS_SET_HASH = hasattr(ColorDist.ColorDistBase, "set_hash")
 
 
 def _expected_hash(stretch, dist):
@@ -49,14 +48,14 @@ def _expected_hash(stretch, dist):
     # installed ginga uses for a ColorDist's ``hash``.
     base = np.arange(0.0, float(dist.hashsize), 1.0) / dist.hashsize
     out = np.clip(np.asarray(stretch(base, clip=True), dtype=float), 0.0, 1.0)
-    if _GINGA_NORMALIZED_HASH:
+    if _GINGA_HAS_SET_HASH:
         return out.astype(np.float32)
     return (out * (dist.colorlen - 1)).astype(np.int64)
 
 
 def _assert_hash_matches(dist, stretch):
     expected = _expected_hash(stretch, dist)
-    if _GINGA_NORMALIZED_HASH:
+    if _GINGA_HAS_SET_HASH:
         # The float32 storage of the same float64 computation; tolerance is
         # far below one 8-bit quantization level (1/255).
         np.testing.assert_allclose(dist.hash, expected, rtol=0.0, atol=1e-6)
@@ -70,7 +69,7 @@ def _max_level_diff(dist, stretch):
     diff = np.abs(
         dist.hash.astype(np.float64) - _expected_hash(stretch, dist)
     ).max()
-    if _GINGA_NORMALIZED_HASH:
+    if _GINGA_HAS_SET_HASH:
         diff *= 255
     return round(diff)
 
@@ -173,6 +172,17 @@ def test_power_stretch_uses_adapter_not_ginga_power():
     dist = image._viewer.get_rgbmap().get_dist()
     assert not isinstance(dist, ColorDist.PowerDist)
     _assert_hash_matches(dist, stretch)
+
+
+def test_adapter_emits_no_deprecation_warning():
+    # On ginga >= 7.1 a PendingDeprecationWarning from check_hash() means the
+    # adapter stored an old-contract integer hash and was rescued by ginga's
+    # backward-compat shim (ejeschke/ginga#1148); the adapter must store the
+    # representation the installed ginga expects, on every ginga version.
+    image = _loaded_widget()
+    with warnings.catch_warnings():
+        warnings.simplefilter("error", PendingDeprecationWarning)
+        image.set_stretch(PowerStretch(3.0))
 
 
 def test_powerdist_stretch_maps_to_ginga_power():
