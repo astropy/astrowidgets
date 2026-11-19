@@ -18,6 +18,12 @@ New Features
 Bug Fixes
 ---------
 
+- Adapted the astropy-stretch color distribution used by the ginga
+  ``ImageWidget`` to the new ColorDist hash contract in the upcoming
+  ginga 7.1 (normalized float curve instead of integer levels), using
+  ginga's new public ``set_hash()`` API where available while remaining
+  compatible with released ginga. [#226, #229]
+
 - Fixed the RA/Dec shown in the bqplot ``ImageWidget`` cursor readout,
   which transposed the x and y pixel coordinates when converting to sky
   coordinates. Also fixed both backends reading pixel 0's value for
