@@ -22,7 +22,7 @@ New Features
   stretch too steep to be drawn that way without banding, such as the
   default ``LogStretch``, is still applied to the pixels and sent when the
   cuts or stretch change, but as 8 bit, a quarter of the size. Removing
-  catalogs no longer sends the image either. [#PRNUM]
+  catalogs no longer sends the image either. [#244]
 
 Bug Fixes
 ---------
