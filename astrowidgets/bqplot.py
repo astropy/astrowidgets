@@ -1,4 +1,4 @@
-from contextlib import ExitStack, contextmanager
+from contextlib import contextmanager
 from pathlib import Path
 
 import astropy.visualization as apviz
@@ -235,6 +235,24 @@ class _AstroImage(ipw.VBox):
         # colors here means a list of hex colors
         self._image.scales["image"].colors = colors
 
+    def set_color_limits(self, low, high):
+        """
+        Set the pixel values drawn in the first and last of the colors.
+
+        The front end maps pixel values to colors on the GPU, so this
+        changes the display by sending two numbers, not the image.
+
+        Parameters
+        ----------
+        low, high : float
+            The pixel values drawn in the first and in the last color.
+            Values outside this range are drawn in the nearer of the two.
+        """
+        color_scale = self._image.scales["image"]
+        with color_scale.hold_sync():
+            color_scale.min = float(low)
+            color_scale.max = float(high)
+
     def _check_file_exists(self, filename, overwrite=False):
         if Path(filename).exists() and not overwrite:
             raise ValueError(
@@ -362,15 +380,119 @@ class _AstroImage(ipw.VBox):
         self._figure.marks = marks
 
 
-def bqcolors(colormap, reverse=False):
-    # bqplot-image-gl has 256 levels
-    LEVELS = 256
+# The number of colors the bqplot-image-gl front end draws an image in: it
+# resamples whatever list of colors it is given to this many.
+LEVELS = 256
+
+# The biggest step in brightness, as a fraction of black to white, that a
+# stretch may make from one color to the next and still be built into the
+# colors. Building a stretch in sorts the pixels into `LEVELS` equal bins
+# between the cuts *before* stretching them, so a stretch that is steep
+# somewhere draws everything in one of those bins as a single shade: the
+# default log stretch puts the faintest 0.4% of the range, which it spreads
+# over a quarter of the way from black to white, into one. A stretch
+# steeper than this is applied to the pixels instead, which costs sending
+# the image again each time the cuts or the stretch change.
+#
+# The linear stretch steps by 1 / 255, the square root by 0.06 at its
+# steepest and the default log by 0.23.
+MAX_BUILT_IN_STEP = 0.1
+
+# How many rows of an image are scaled at a time, to keep what scaling
+# needs in memory, beyond the 8 bit result, to a few megabytes.
+_ROWS_PER_BAND = 256
+
+
+def stretch_fits_in_colors(stretch):
+    """
+    Decide whether a stretch can be built into the colors of an image.
+
+    Parameters
+    ----------
+    stretch : `astropy.visualization.BaseStretch`
+        The stretch.
+
+    Returns
+    -------
+    bool
+        True if the stretch never steps by more than `MAX_BUILT_IN_STEP`
+        from one of the `LEVELS` colors to the next, so that drawing with
+        it built into the colors -- see `bqcolors` -- looks the same as
+        stretching the pixels.
+    """
+    levels = np.asarray(stretch(np.linspace(0, 1, LEVELS)), dtype=float)
+    if not np.all(np.isfinite(levels)):
+        return False
+    return bool(np.max(np.abs(np.diff(levels))) <= MAX_BUILT_IN_STEP)
+
+
+def scale_to_levels(data, low, high, stretch):
+    """
+    Scale an image to the number of the color each pixel is drawn in.
+
+    Parameters
+    ----------
+    data : array-like
+        The image, two dimensional.
+    low, high : float
+        The pixel values drawn in the first and in the last color.
+    stretch : `astropy.visualization.BaseStretch`
+        The stretch applied between them.
+
+    Returns
+    -------
+    `numpy.ndarray`
+        The image as uint8, a quarter the size of float32, each pixel the
+        number of the color it is drawn in: the front end has only `LEVELS`
+        colors, so nothing that reaches the screen is lost. If the image
+        has NaNs, which uint8 cannot hold and which the front end leaves
+        undrawn, it is float32 from 0 to 1 instead.
+    """
+    data = np.asarray(data)
+    interval = apviz.ManualInterval(low, high)
+    levels = np.empty(data.shape, dtype=np.uint8)
+    for start in range(0, data.shape[0], _ROWS_PER_BAND):
+        rows = slice(start, start + _ROWS_PER_BAND)
+        scaled = stretch(interval(data[rows]))
+        if np.isnan(scaled).any():
+            return np.asarray(stretch(interval(data)), dtype=np.float32)
+        # The front end draws a value from 0 to 1 in color number
+        # floor(256 * value), and the last color for 1 itself.
+        levels[rows] = np.minimum(scaled * LEVELS, LEVELS - 1)
+    return levels
+
+
+def bqcolors(colormap, reverse=False, stretch=None):
+    """
+    Make the list of colors bqplot draws an image in.
+
+    Parameters
+    ----------
+    colormap : str
+        Name of a matplotlib colormap.
+    reverse : bool, optional
+        If True, reverse the order of the colors.
+    stretch : `astropy.visualization.BaseStretch`, optional
+        A stretch to build into the colors. The front end picks a color by
+        where a pixel value falls, linearly, between the two color limits.
+        A stretch is applied to that same 0 to 1 quantity, so spacing the
+        colors by the stretch draws the stretched image without the pixel
+        values having to be changed.
+
+    Returns
+    -------
+    list of str
+        `LEVELS` colors, as hex strings.
+    """
+    levels = np.linspace(0, 1, LEVELS)
+    if stretch is not None:
+        levels = np.clip(stretch(levels), 0, 1)
 
     # Make a matplotlib colormap object
     mpl = pyplot.get_cmap(colormap, LEVELS)
 
     # Get RGBA colors
-    mpl_colors = mpl(np.linspace(0, 1, LEVELS))
+    mpl_colors = mpl(levels)
 
     # Convert RGBA to hex
     bq_colors = [to_hex(mpl_colors[i, :]) for i in range(LEVELS)]
@@ -409,15 +531,21 @@ class ImageWidget(ipw.VBox, CursorInfoMixin, ImageViewerLogic):
         self._data = None
         self._wcs = None
 
+        # True while the front end holds the pixels of the displayed image
+        # as they are, so that they need not be sent again.
+        self._front_end_has_pixels = False
+
+        # Inside _batch_update the _apply_* hooks only note, here, that the
+        # display needs bringing up to date; it is done once at the end.
+        self._batching = False
+        self._display_is_stale = False
+
         # Use this to manage whether or not to send changes in zoom level
         # to the viewer.
         self._viewport_change_source_is_gui = False
 
         # Guards re-entrancy while we programmatically update the viewport.
         self._updating_viewport = False
-
-        # While True, _refresh_display does nothing; set by _defer_refresh.
-        self._refresh_deferred = False
 
         # Provide an Output widget to which prints can be directed for
         # debugging.
@@ -520,55 +648,112 @@ class ImageWidget(ipw.VBox, CursorInfoMixin, ImageViewerLogic):
         ):
             scale.observe(update_viewport, names="max")
 
-    def _interval_and_stretch(self, stretch=None, cuts=None):
+    def _color_limits(self, image_label):
         """
-        Stretch and normalize the data before sending to the viewer.
+        Work out the pixel values the cuts stored for a label stand for.
+
+        Parameters
+        ----------
+        image_label : str
+            Resolved label of a displayed image.
+
+        Returns
+        -------
+        low, high : float
+            The pixel values to draw in the first and in the last color.
+            ``high`` is always above ``low``, and both are finite, whatever
+            the image: the front end divides by their difference.
         """
-        interval = cuts or self._default_cuts
-        intervaled = interval(np.asarray(self._data))
+        cuts = self.get_cuts(image_label=image_label)
+        low, high = (
+            float(limit) for limit in cuts.get_limits(np.asarray(self._data))
+        )
+        if not (np.isfinite(low) and np.isfinite(high)):
+            # The limits are sent as JSON, which has no NaN or infinity.
+            return 0.0, 1.0
+        if high <= low:
+            # An image of a single value. Draw it in the first color, as
+            # astropy's intervals scale it to zero.
+            return low, low + 1.0
+        return low, high
 
-        stretch = stretch or self._default_stretch
-        if stretch:
-            stretched = stretch(intervaled)
-        else:
-            stretched = intervaled
-
-        return stretched
-
-    def _send_data(self, reset_view=True, stretch=None, cuts=None):
-        if self._data is not None:
-            self._astro_im.set_data(
-                self._interval_and_stretch(stretch=stretch, cuts=cuts),
-                reset_view=reset_view,
-            )
-
-    def _refresh_display(self, image_label=None):
+    def _colors(self, image_label):
         """
-        Recompute the displayed array from the cuts and stretch stored
-        for the image and send it to the viewer. The viewport (zoom/pan)
-        is left untouched; it is owned by the ``_apply_viewport`` hook.
-        """
-        if self._data is None or self._refresh_deferred:
-            return
+        Make the colors to draw a label's image in.
 
-        self._send_data(
-            cuts=self.get_cuts(image_label=image_label),
-            stretch=self.get_stretch(image_label=image_label),
-            reset_view=False,
+        Parameters
+        ----------
+        image_label : str
+            Resolved label of a displayed image.
+
+        Returns
+        -------
+        list of str
+            The colors of the label's stored colormap, with its stored
+            stretch built in if it is one that can be -- see
+            `stretch_fits_in_colors`. If not, the stretch is applied to
+            the pixels instead and the colors are evenly spaced.
+        """
+        stretch = self.get_stretch(image_label=image_label)
+        if not stretch_fits_in_colors(stretch):
+            stretch = None
+        return bqcolors(
+            self.get_colormap(image_label=image_label), stretch=stretch
         )
 
-    @contextmanager
-    def _defer_refresh(self):
+    def _update_display(self, image_label):
         """
-        Make _refresh_display a no-op inside the block so that several
-        settings can be stored with a single recomputation of the
-        displayed array. The caller refreshes after the block.
+        Bring the front end up to date with the settings stored for a label.
+
+        What is sent depends on the stretch -- see `stretch_fits_in_colors`.
+
+        A stretch that can be built into the colors is: the pixels are sent
+        once, as they are, the cuts become the limits of the color scale
+        and the stretch the spacing of its colors. The front end maps
+        pixel values to colors on the GPU, so after the first time this
+        sends two numbers or a list of colors, never the image.
+
+        For any other stretch the cuts and the stretch are applied to the
+        pixels here, and the result sent, each time either changes.
+
+        Parameters
+        ----------
+        image_label : str
+            Resolved label of a displayed image.
         """
-        self._refresh_deferred = True
-        try:
-            yield
-        finally:
-            self._refresh_deferred = False
+        if self._data is None:
+            return
+        if self._batching:
+            self._display_is_stale = True
+            return
+
+        stretch = self.get_stretch(image_label=image_label)
+        low, high = self._color_limits(image_label)
+
+        with self._astro_im._hold_all_sync():
+            if stretch_fits_in_colors(stretch):
+                if not self._front_end_has_pixels:
+                    # float32 is the one type the front end draws by
+                    # value: it reads uint8 as a fraction of 255, converts
+                    # float64 itself after it has been sent at twice the
+                    # size, and refuses the rest. A float32 image is not
+                    # copied.
+                    self._astro_im.set_data(
+                        np.asarray(self._data, dtype=np.float32),
+                        reset_view=False,
+                    )
+                    self._front_end_has_pixels = True
+                self._astro_im.set_color_limits(low, high)
+            else:
+                self._front_end_has_pixels = False
+                self._astro_im.set_data(
+                    scale_to_levels(self._data, low, high, stretch),
+                    reset_view=False,
+                )
+                # Both forms scale_to_levels sends run from 0 to 1 as the
+                # front end reads them.
+                self._astro_im.set_color_limits(0, 1)
+            self._astro_im.set_color(self._colors(image_label))
 
     # ------------------------------------------------------------------
     # Rendering hooks
@@ -588,33 +773,27 @@ class ImageWidget(ipw.VBox, CursorInfoMixin, ImageViewerLogic):
         `~astro_image_display_api.ImageViewerLogic`; ``load_image`` wraps
         its state changes and rendering-hook calls in this context.
 
-        The composition is: hold the front-end sync of the image mark and
-        the scales for the whole block (so each widget sends one state
+        The front-end sync of the image mark, its color scale and the axis
+        scales is held for the whole block, so each widget sends one state
         message, with the image mark flushing first -- see
-        ``_AstroImage._hold_all_sync``), and defer the display refreshes
-        that the ``_apply_*`` hooks trigger, collapsing them into a single
-        recomputation of the displayed array that runs while the front-end
-        sync is still held.
+        ``_AstroImage._hold_all_sync``. The ``_apply_*`` hooks called in the
+        block do not each bring the display up to date; that is done once,
+        at the end, while the sync is still held.
         """
-        with ExitStack() as stack:
-            # Entered first, so it releases last: everything below happens
-            # while the front-end sync is held.
-            stack.enter_context(self._astro_im._hold_all_sync())
-            # Runs on exit, after _defer_refresh has released: the one
-            # refresh that replaces the refreshes deferred in the block.
-            stack.callback(self._refresh_after_batch)
-            stack.enter_context(self._defer_refresh())
-            yield
-
-    def _refresh_after_batch(self):
-        """
-        Recompute and send the displayed array once after a batched update.
-
-        The viewport is not touched here: the ``_apply_viewport`` hook has
-        already pushed the stored viewport into the scales during the batch.
-        """
-        for image_label in self._displayed_image_labels:
-            self._refresh_display(image_label=image_label)
+        with self._astro_im._hold_all_sync():
+            self._batching = True
+            try:
+                yield
+            finally:
+                self._batching = False
+                # Only if something in the block changed what is drawn:
+                # this is also used around changes to catalogs, which do
+                # not, and bringing the display up to date can mean
+                # sending the image.
+                if self._display_is_stale:
+                    self._display_is_stale = False
+                    for image_label in self._displayed_image_labels:
+                        self._update_display(image_label)
 
     def _render_image(self, image_label):
         """
@@ -648,37 +827,41 @@ class ImageWidget(ipw.VBox, CursorInfoMixin, ImageViewerLogic):
         self._data = data.data if isinstance(data, NDData) else data
         self._wcs = info.wcs
 
+        # The front end still holds the image shown before. The viewport
+        # (zoom/pan) is left untouched; it is owned by the
+        # ``_apply_viewport`` hook.
+        self._front_end_has_pixels = False
+        self._update_display(image_label)
+
     def _apply_cuts(self, image_label):
         """
-        Re-display the image using the cut levels stored for a label.
+        Push the cut levels stored for a label into the display.
 
         Overrides the no-op rendering hook from
         `~astro_image_display_api.ImageViewerLogic`; only called when the
-        label is displayed. Changing the cuts only affects the color
-        mapping, so the current viewport (zoom/pan) is left untouched.
+        label is displayed. See ``_update_display`` for what is sent.
 
         Parameters
         ----------
         image_label : str
             Resolved label whose stored cuts to apply.
         """
-        self._refresh_display(image_label=image_label)
+        self._update_display(image_label)
 
     def _apply_stretch(self, image_label):
         """
-        Re-display the image using the stretch stored for a label.
+        Push the stretch stored for a label into the display.
 
         Overrides the no-op rendering hook from
         `~astro_image_display_api.ImageViewerLogic`; only called when the
-        label is displayed. Changing the stretch only affects the color
-        mapping, so the current viewport (zoom/pan) is left untouched.
+        label is displayed. See ``_update_display`` for what is sent.
 
         Parameters
         ----------
         image_label : str
             Resolved label whose stored stretch to apply.
         """
-        self._refresh_display(image_label=image_label)
+        self._update_display(image_label)
 
     def _apply_colormap(self, image_label):
         """
@@ -686,16 +869,17 @@ class ImageWidget(ipw.VBox, CursorInfoMixin, ImageViewerLogic):
 
         Overrides the no-op rendering hook from
         `~astro_image_display_api.ImageViewerLogic`; only called when the
-        label is displayed.
+        label is displayed. Only the colors are sent, never the image.
 
         Parameters
         ----------
         image_label : str
             Resolved label whose stored colormap to apply.
         """
-        self._astro_im.set_color(
-            bqcolors(self.get_colormap(image_label=image_label))
-        )
+        if self._batching:
+            self._display_is_stale = True
+            return
+        self._astro_im.set_color(self._colors(image_label))
 
     def _apply_viewport(self, image_label):
         """
