@@ -15,6 +15,15 @@ New Features
   defaults to decimal degrees; set ``sky_coordinate_format`` to
   ``'sexagesimal'`` for the previous display. [#222]
 
+- The bqplot ``ImageWidget`` no longer sends the whole image to the
+  browser each time the cuts, stretch or colormap change. The pixels are
+  sent once, when an image is loaded, and the cuts and stretch are applied
+  in the browser, through the limits and the colors of the color scale. A
+  stretch too steep to be drawn that way without banding, such as the
+  default ``LogStretch``, is still applied to the pixels and sent when the
+  cuts or stretch change, but as 8 bit, a quarter of the size. Removing
+  catalogs no longer sends the image either. [#PRNUM]
+
 Bug Fixes
 ---------
 
